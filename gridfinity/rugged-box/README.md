@@ -51,6 +51,83 @@ Box options:
 * Reinforced (thicker) corners
 * Optional third hinge for large boxes
 
+## Fork additions: lid carry handle and heavy-duty attachments
+
+This fork extends the original model with a stack-friendly carry handle in
+the lid and reinforced attachments, targeting transport of a stack of loaded
+boxes (up to ~5 kg per box, ~15-25 kg per stack of 3-5 boxes) carried by the
+top box's lid handle.
+
+### Lid carry handle (`Lid_Handle`, default on)
+
+A fold-flat carry bail recessed into a pocket in the center of the lid:
+
+* The folded bail and its pivot bosses stay at least 1 mm below the plane of
+  the Gridfinity feet of a box stacked on top, so **boxes still stack and
+  latch normally with the handle installed**.
+* The pivot axis is a pair of **M3x20** screws in double shear through
+  printed bosses, so the carrying load is carried by steel, not by printed
+  hinge pins. The lid handle always uses M3 pivots regardless of the
+  `Heavy_Duty` setting.
+* A sloped finger scoop ahead of the folded grip bar provides access to lift
+  the bail; when raised, there is ~32 mm of finger clearance between the
+  grip and the lid surface.
+* Requires a box at least 3 Gridfinity units wide and a top at least
+  2 units tall. On boxes 2 units long the pivot axis is offset from the lid
+  center (the pocket cannot be centered around it), so a single box hangs
+  with a slight tilt; stacks hang nearly level. On boxes 3+ units long the
+  axis is centered and the box hangs level.
+* Print the `lid_handle` part flat as oriented; layers run along the bail
+  plane, which loads the layer lines in tension/bending within the plane.
+* Assembly: place the bail eyelets between the boss pairs and drive the two
+  M3x20 screws outward from the pocket center with a long (ball-end) hex
+  key. The screws thread into the outer bosses.
+
+The handle load path is: bail (steel pivot screws) → lid pocket housing →
+lid hinges and latches → box body → side stacking latches → next box below.
+The weakest links are the printed latch and hinge parts, which is what the
+heavy-duty option reinforces.
+
+### Heavy-duty attachments (`Heavy_Duty`, default on)
+
+* All hinge, latch, and stacking latch screws move from **M3 to M4**, and
+  the printed screw eyelets and latch bodies scale up accordingly
+  (`screw_eyelet_size_proportion` and `latch_body_size_proportion`
+  3.0 → 3.4). Latches hook over the exposed steel screw shanks, so shear
+  goes through steel; the enlarged printed eyelets reduce bearing stress at
+  roughly 5 MPa or less per attachment at the target loads (PETG yields at
+  ~50 MPa; short-term carrying loads leave a comfortable margin for creep
+  and shock).
+* Default `Rib_Width` raised from 6 to 8 mm: thicker latch ribs and hinge
+  ribs, and longer thread engagement for the screws.
+* The optional third (center) hinge now engages on boxes **3+ units wide**
+  (previously 5+).
+* With the default `Latch_Width` 28 and `Rib_Width` 8, attachment screws are
+  **M4x45** (`28 + 2 * 8 = 44`); check the console output (BOM echo) for the
+  exact count and length for your configuration. Set `Heavy_Duty` to false
+  to keep the original M3 sizing.
+
+### Stacking latch density (`Stacking_Latch_Density`)
+
+For heavy stacks, `max` places one stacking latch per Gridfinity unit of box
+length on each side (a 2-unit box gets 2 per side, 4 total). This requires
+`Latch_Width + 2 * Rib_Width` ≤ 40 mm (for example, `Latch_Width` 24 with
+`Rib_Width` 8) so adjacent latches do not overlap. The default `standard`
+keeps the original placement.
+
+### Print recommendations for load-rated boxes
+
+* Material: PETG or ASA (better creep and impact behavior than PLA;
+  PLA is acceptable for light duty).
+* Walls: 4+ perimeters; infill 30%+ (gyroid or grid).
+* Use the `top_modifier`/`bottom_modifier` volumes to locally raise infill
+  and perimeters around the attachment ribs (see "Reinforcing the box
+  attachment ribs" below). The lid handle pocket housing is included in the
+  top modifier volume.
+* Latches, stacking latches, and the lid handle print in their default
+  orientation; do not rotate them, their strength depends on layer
+  direction.
+
 ## Hardware and Tools
 
 The hinges and latches are attached using M3 screws, **M3x40** by default.

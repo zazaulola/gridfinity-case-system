@@ -5,14 +5,9 @@
  * Licensed under Creative Commons (4.0 International License) Attribution-ShareAlike
  */
 
-include <rugged-box-library.scad>;
-include <gridfinity-rebuilt-openscad/standard.scad>;
-use <gridfinity-rebuilt-openscad/gridfinity-rebuilt-baseplate.scad>;
-use <gridfinity-rebuilt-openscad/gridfinity-rebuilt-utility.scad>;
-
 /* [Rendering] */
 // Part selection. Note: Assembled box previews show latches without chamfers for performance reasons.
-Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs, "top_grid_modifier": Top print modifier volume for Gridfinity lid]
+Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs, "top_grid_modifier": Top print modifier volume for Gridfinity lid]
 
 /* [Dimensions] */
 // Interior side-to-side size in 42mm Gridfinity units
@@ -55,8 +50,8 @@ Latch_Type = "draw"; // [clip: Clip, draw: Draw]
 // Add a third hinge for boxes 5U or wider
 Third_Hinge = true;
 
-// Optional handle for sufficiently wide boxes
-Handle = true;
+// Optional front handle for sufficiently wide boxes
+Handle = false;
 
 // Optional label for sufficiently wide boxes
 Label = true;
@@ -67,6 +62,23 @@ Label_Text = "Label";
 // Approximate height of text for optional label in millimeters
 Label_Text_Size = 10; // [5:0.1:25]
 
+/* [Lid Carry Handle] */
+// Fold-flat carry handle recessed into the center of the lid. The folded
+// handle stays below the stacking plane, so boxes still stack on top.
+// Requires a box at least 3 units wide with a top at least 2 units tall.
+Lid_Handle = true;
+
+/* [Reinforcement] */
+// Use M4 attachment screws with enlarged screw eyelets and thicker latches
+// and hinges, for carrying stacks of loaded boxes (up to ~5 kg per box,
+// ~25 kg per stack). Requires M4 hardware; see README for screw lengths.
+Heavy_Duty = true;
+
+// Stacking latch placement along the box sides. "Every grid unit" adds a
+// stacking latch for each Gridfinity unit of box length and requires
+// Latch_Width + 2 * Rib_Width to be at most 40 mm.
+Stacking_Latch_Density = "standard"; // [standard: Standard, max: Every grid unit]
+
 /* [Advanced Size Adjustments] */
 // Base wall thickness in millimeters for most of the box
 Wall_Thickness = 3.0; // [2.4:0.1:10]
@@ -75,7 +87,7 @@ Wall_Thickness = 3.0; // [2.4:0.1:10]
 Lip_Thickness = 3.0; // [0.4:0.1:10]
 
 // Base thickness in millimeters of the support ribs. The latch ribs are this thick, while the hinge and side ribs are twice this thick.
-Rib_Width = 6; // [1:0.1:20]
+Rib_Width = 8; // [1:0.1:20]
 
 // Latch width in millimeters
 Latch_Width = 28; // [5:1:50]
@@ -87,6 +99,26 @@ Latch_Screw_Separation = 16; // [5:1:40]
 Size_Tolerance = 0.20; // [0:0.01:1]
 
 module __end_customizer_options__() { }
+
+// Note: The includes are placed after the customizer options so that the
+// heavy-duty overrides below can reference them. OpenSCAD evaluates
+// overriding assignments at the include position, so every variable they
+// reference must already be defined at that point.
+include <rugged-box-library.scad>;
+include <gridfinity-rebuilt-openscad/standard.scad>;
+use <gridfinity-rebuilt-openscad/gridfinity-rebuilt-baseplate.scad>;
+use <gridfinity-rebuilt-openscad/gridfinity-rebuilt-utility.scad>;
+
+// Heavy-duty attachment overrides
+//
+// These override constants inside rugged-box-library.scad (variables
+// assigned in the including file take precedence over the included file in
+// OpenSCAD). M4 screws and enlarged eyelets and latch bodies increase the
+// load rating of the hinges, latches, and stacking latches.
+
+screw_diameter = Heavy_Duty ? 4 : 3;
+screw_eyelet_size_proportion = Heavy_Duty ? 3.4 : 3.0;
+latch_body_size_proportion = Heavy_Duty ? 3.4 : 3.0;
 
 // Constants
 
@@ -129,17 +161,23 @@ function rb_rear_rib_positions() = [
 function rb_latch_hinge_position() = (l_grid * (Width / 2 - 0.5));
 
 function rb_stacking_latch_positions() = (
-    Stacking_Latches
-    ? [
-        let (points = [
-            each for (j = [
-                for (i = [0:2:Length / 2 - 1]) i
-            ]) (j == Length - 2 - j) ? [j] : [j, Length - 2 - j]
-        ])
-        for (j = [for (i = points) (i + 0.5) * l_grid])
-        j - (l_grid * (Length / 2 - 0.5))
-    ]
-    : []
+    !Stacking_Latches
+    ? []
+    : Stacking_Latch_Density == "max"
+        // One stacking latch per Gridfinity unit of box length
+        ? [
+            for (i = [0:1:Length - 1])
+            (i + 0.5) * l_grid - (l_grid * Length / 2)
+        ]
+        : [
+            let (points = [
+                each for (j = [
+                    for (i = [0:2:Length / 2 - 1]) i
+                ]) (j == Length - 2 - j) ? [j] : [j, Length - 2 - j]
+            ])
+            for (j = [for (i = points) (i + 0.5) * l_grid])
+            j - (l_grid * (Length / 2 - 0.5))
+        ]
 );
 
 // Functions
@@ -307,26 +345,45 @@ module custom_top() {
         }
         if (Gridfinity_Stackable) {
             extra_depth = gridfinity_base_extra_height(hole=true);
-            translate([0, 0, stackable_top_plate_offset])
-            translate([0, 0, stackable_bottom_base_offset])
-            translate([0, 0, h_base + extra_depth])
-            rbox_for_interior()
-            mirror([0, 0, 1])
-            gridfinity_baseplate_cut();
+            difference() {
+                translate([0, 0, stackable_top_plate_offset])
+                translate([0, 0, stackable_bottom_base_offset])
+                translate([0, 0, h_base + extra_depth])
+                rbox_for_interior()
+                mirror([0, 0, 1])
+                gridfinity_baseplate_cut();
+                // Protect the lid handle pivot bosses from the plate cut
+                rbox_lid_handle_plate_keepout();
+            }
         }
+        // Reopen the lid handle pocket through the stacking plate and the
+        // interior grid
+        rbox_lid_handle_pocket_cavity();
     }
 }
 
 module gridfinity_box_part() {
     if (Part == "top_grid_modifier") {
         rbox_for_top()
-        custom_top_interior_grid(interior_base=false);
+        difference() {
+            custom_top_interior_grid(interior_base=false);
+            rbox_lid_handle_pocket_cavity();
+        }
     } else {
         children();
     }
 }
 
 module main() {
+    assert(
+        Stacking_Latch_Density != "max"
+        || Latch_Width + 2 * Rib_Width <= l_grid - 2,
+        str(
+            "Stacking latch density \"max\" requires ",
+            "Latch_Width + 2 * Rib_Width <= ", l_grid - 2, " mm ",
+            "so adjacent latches do not overlap"
+        )
+    );
     rbox(
         width,
         length,
@@ -341,6 +398,11 @@ module main() {
         top_grip=Top_Grip,
         hinge_end_stops=Hinge_End_Stops,
         handle=Handle,
+        lid_handle=Lid_Handle,
+        lid_handle_stow_depth=(
+            // Keep the folded handle below the bases of a box stacked on top
+            Gridfinity_Stackable ? stackable_plate_offset + 1.0 : 1.0
+        ),
         label=Label,
         label_text=Label_Text,
         label_text_size=Label_Text_Size
@@ -351,7 +413,7 @@ module main() {
         rib_width=Rib_Width,
         latch_width=Latch_Width,
         latch_screw_separation=Latch_Screw_Separation,
-        third_hinge_width=Third_Hinge ? (l_grid * 5) : 0,
+        third_hinge_width=Third_Hinge ? (l_grid * 3) : 0,
         stacking_separation=stacking_separation,
         size_tolerance=Size_Tolerance
     ) {

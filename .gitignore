@@ -7,3 +7,4 @@ __pycache__
 build/
 !*/config.json
 !_template/*.json
+.DS_Store

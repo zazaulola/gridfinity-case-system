@@ -52,6 +52,35 @@ handle_min_height = 16;
 handle_max_height = 35;
 handle_radius = 5;
 
+// Lid handle size
+// The lid handle pivots always use M3 screws, independent of the main
+// attachment screw size, so the folded handle stays below the stacking plane
+lid_handle_screw_diameter = 3;
+lid_handle_screw_length = 20;
+lid_handle_eyelet_size_proportion = 3.0;
+lid_handle_bar_thickness = 9;
+lid_handle_bar_width = 16;
+lid_handle_bar_max_length = 130;
+lid_handle_bar_edge_radius = 3;
+lid_handle_arm_width = 8;
+lid_handle_boss_width = 6;
+lid_handle_min_grip_span = 60;
+// Finger space between the raised grip bar underside and the lid surface
+lid_handle_grip_clearance = 32;
+// Distance from the pocket to the box interior edge
+lid_handle_pocket_rim = 8;
+lid_handle_pocket_wall = 4;
+lid_handle_pocket_corner_radius = 6;
+lid_handle_floor_thickness = 3;
+// Interior clearance kept below the pocket housing for bin lips
+lid_handle_interior_margin = 3.5;
+// Extra pocket length ahead of the folded grip bar for finger access
+lid_handle_finger_room = 8;
+// Slope inset of the finger scoop wall between pocket opening and floor
+lid_handle_scoop_inset = 6;
+lid_handle_swing_margin = 2;
+lid_handle_fit = 0.4;
+
 // Label size
 label_thickness = 2;
 label_fit_thickness = 0.1;
@@ -89,6 +118,11 @@ label_max_height = 30;
  *  - top_grip: Add optional grip to front of box top
  *  - hinge_end_stops: Add optional hinge end stops to box bottom hinges
  *  - handle: Add optional handle for sufficiently wide boxes
+ *  - lid_handle: Add optional fold-flat carry handle recessed into the
+ *    center of the box top for sufficiently large boxes
+ *  - lid_handle_stow_depth: Depth below the box top outer surface at which
+ *    the highest point of the folded lid handle rests. Set this deeper than
+ *    any exterior stacking features so stacked boxes clear the folded handle.
  *  - label: Add optional label for sufficiently wide boxes
  *  - label_text: Custom text for optional label
  *  - label_text_size: Approximate label text size in millimeters
@@ -118,6 +152,8 @@ module rbox(
     top_grip=false,
     hinge_end_stops=false,
     handle=false,
+    lid_handle=false,
+    lid_handle_stow_depth=1.0,
     label=false,
     label_text="",
     label_text_size=10
@@ -136,6 +172,8 @@ module rbox(
     $b_top_grip = top_grip;
     $b_hinge_end_stops = hinge_end_stops;
     $b_handle = handle;
+    $b_lid_handle = lid_handle;
+    $b_lid_handle_stow_depth = lid_handle_stow_depth;
     $b_label = label;
     $b_label_text = label_text;
     $b_label_text_size = label_text_size;
@@ -237,6 +275,36 @@ module rbox_stacking_latch(placement="print") { _stacking_latch(placement); }
 
 module rbox_handle(placement="print") { _handle(placement); }
 
+module rbox_lid_handle(placement="print") { _lid_handle(placement); }
+
+// Cavity to subtract for the lid handle pocket. Renders nothing if the lid
+// handle is disabled or unavailable. Subtract this from any custom top body
+// additions (such as exterior stacking plates) placed over the pocket area.
+module rbox_lid_handle_pocket_cavity() {
+    if (_lid_handle_enabled() && $b_part == "top") {
+        render(convexity=4)
+        union() {
+            difference() {
+                _lid_handle_pocket_cavity_raw();
+                _lid_handle_bosses(expand=0.01);
+            }
+            // Included here so the pivot screw holes stay open through any
+            // material added over the pocket area (such as the interior
+            // grid) that survives inside the boss volumes
+            _lid_handle_screw_holes();
+        }
+    }
+}
+
+// Keep-out volume protecting the lid handle pivot bosses. Subtract this from
+// any cut volumes (such as exterior stacking plate cuts) applied to the box
+// top so the pivot bosses are not carved away.
+module rbox_lid_handle_plate_keepout() {
+    if (_lid_handle_enabled() && $b_part == "top") {
+        _lid_handle_bosses(expand=0.5);
+    }
+}
+
 module rbox_label(placement="print") {
     rbox_for_bottom() {
         _box_label(placement);
@@ -323,6 +391,7 @@ module rbox_part(part) {
         ])
         mirror([0, 0, 1]) {
             if ($children > 1) { rbox_for_top() children(1); } else { rbox_top(); };
+            rbox_lid_handle(placement="box-preview");
             rbox_for_top() {
                 if ($b_latch_type == "clip") {
                     translate([
@@ -368,6 +437,7 @@ module rbox_part(part) {
         )])
         mirror([0, 0, 1]) {
             if ($children > 1) { rbox_for_top() children(1); } else { rbox_top(); };
+            rbox_lid_handle(placement="box-preview");
             rbox_for_top() {
                 if ($b_latch_type == "clip") {
                     translate([
@@ -400,6 +470,8 @@ module rbox_part(part) {
         rbox_stacking_latch(placement="print");
     } else if (part == "handle") {
         rbox_handle(placement="print");
+    } else if (part == "lid_handle") {
+        rbox_lid_handle(placement="print");
     } else if (part == "label") {
         rbox_label();
     }
@@ -446,6 +518,12 @@ module rbox_bom() {
                 )
             ) : ""
         ));
+        if (_lid_handle_enabled()) {
+            echo(str(
+                "Lid handle screws needed: 2 M",
+                lid_handle_screw_diameter, "x", lid_handle_screw_length
+            ));
+        }
     }
 
     rbox_for_bottom()
@@ -614,6 +692,98 @@ function _label_enabled() = (
     )
 );
 
+// Lid handle computed dimensions
+//
+// The lid handle is a fold-flat bail recessed into a pocket in the center of
+// the box top. The pivot axis runs side-to-side (X). The bail folds toward
+// the box hinge side (+Y). All pivot hardware and the folded bail stay below
+// the configured stow depth so items stacked on the box top clear the handle.
+
+function _lid_handle_eyelet_radius() = (
+    lid_handle_screw_diameter * lid_handle_eyelet_size_proportion / 2
+);
+
+// Depth of the pivot axis below the box top outer surface
+function _lid_handle_axis_depth() = (
+    $b_lid_handle_stow_depth + _lid_handle_eyelet_radius()
+);
+
+// Depth of the pocket floor below the box top outer surface
+function _lid_handle_pocket_depth() = (
+    _lid_handle_axis_depth()
+    + max(_lid_handle_eyelet_radius(), lid_handle_bar_thickness / 2)
+    + 0.3
+);
+
+function _lid_handle_arm_length() = (
+    // When raised, the grip bar width is vertical; its underside sits
+    // lid_handle_grip_clearance above the box top surface
+    lid_handle_grip_clearance
+    + _lid_handle_axis_depth()
+    + lid_handle_bar_width / 2
+);
+
+// Interior area available for the pocket, as [width, length]
+function _lid_handle_usable_area() = [
+    $b_inner_width - lid_handle_pocket_rim * 2,
+    $b_inner_length - lid_handle_pocket_rim * 2
+];
+
+function _lid_handle_bar_length() = (
+    min(
+        lid_handle_bar_max_length,
+        _lid_handle_usable_area()[0]
+        - 2 * (lid_handle_fit + lid_handle_boss_width)
+    )
+);
+
+function _lid_handle_pivot_spacing() = (
+    _lid_handle_bar_length() - lid_handle_arm_width
+);
+
+// Clear space between the inner pivot bosses
+function _lid_handle_grip_span() = (
+    _lid_handle_pivot_spacing()
+    - lid_handle_arm_width
+    - (lid_handle_fit + lid_handle_boss_width) * 2
+);
+
+// Pocket extent ahead of the pivot axis, in the fold direction
+function _lid_handle_pocket_reach() = (
+    _lid_handle_arm_length()
+    + lid_handle_bar_width / 2
+    + lid_handle_fit
+    + lid_handle_finger_room
+);
+
+// Pocket extent behind the pivot axis
+function _lid_handle_pocket_back() = (
+    _lid_handle_eyelet_radius() + lid_handle_fit + lid_handle_swing_margin
+);
+
+function _lid_handle_pocket_length() = (
+    _lid_handle_pocket_back() + _lid_handle_pocket_reach()
+);
+
+// Y position of the pivot axis: centered when space allows so the box hangs
+// level, otherwise shifted just enough for the folded bail to fit
+function _lid_handle_axis_offset() = (
+    min(0, _lid_handle_usable_area()[1] / 2 - _lid_handle_pocket_reach())
+);
+
+function _lid_handle_enabled() = (
+    $b_lid_handle
+    && _lid_handle_grip_span() >= lid_handle_min_grip_span
+    && _lid_handle_pocket_length() <= _lid_handle_usable_area()[1]
+    && (
+        $b_top_outer_height >= (
+            _lid_handle_pocket_depth()
+            + lid_handle_floor_thickness
+            + lid_handle_interior_margin
+        )
+    )
+);
+
 function _label_rib_separation() = (
     $b_inner_width
     - $b_corner_radius * 2
@@ -765,15 +935,23 @@ module _box_part_setup(part) {
 }
 
 module _box_body() {
-    _box_add_seal() {
-        _box_sides();
-        _box_center_base(min($b_outer_height, $b_wall_thickness));
-        _box_ribs();
-        _box_latch_ribs();
-        _box_hinge_ribs();
-        _box_stacking_latch_ribs();
-        _box_top_grip();
-        _box_label_holder();
+    difference() {
+        union() {
+            _box_add_seal() {
+                _box_sides();
+                _box_center_base(min($b_outer_height, $b_wall_thickness));
+                _box_ribs();
+                _box_latch_ribs();
+                _box_hinge_ribs();
+                _box_stacking_latch_ribs();
+                _box_top_grip();
+                _box_label_holder();
+            }
+            if (_lid_handle_enabled() && $b_part == "top") {
+                _box_lid_handle_housing();
+            }
+        }
+        rbox_lid_handle_pocket_cavity();
     }
 }
 
@@ -786,6 +964,9 @@ module _box_body_modifier_volume() {
             _box_hinge_ribs();
             _box_stacking_latch_ribs();
             _box_label_holder();
+            if (_lid_handle_enabled() && $b_part == "top") {
+                _box_lid_handle_housing();
+            }
         }
         _box_extrude()
         intersection() {
@@ -2112,6 +2293,191 @@ module _stacking_latch(placement="default") {
         _stacking_latch_part();
     } else {
         _stacking_latch_part();
+    }
+}
+
+// Lid handle
+//
+// Part coordinates for the box top place the outer lid surface at z=0 with
+// +z extending into the lid interior. The pivot axis runs along X at
+// y=_lid_handle_axis_offset(), z=_lid_handle_axis_depth(). The bail folds
+// flat toward +Y into the pocket and swings up to vertical for carrying.
+
+module _lid_handle_pocket_footprint(expand=0, floor_level=false) {
+    back = _lid_handle_pocket_back();
+    reach = (
+        _lid_handle_pocket_reach()
+        - (floor_level ? lid_handle_scoop_inset : 0)
+    );
+    translate([0, _lid_handle_axis_offset() + (reach - back) / 2])
+    _rounded_square(
+        [
+            _lid_handle_bar_length()
+            + (lid_handle_fit + lid_handle_boss_width) * 2
+            + expand * 2,
+            back + reach + expand * 2
+        ],
+        lid_handle_pocket_corner_radius + expand,
+        center=true
+    );
+}
+
+module _lid_handle_pocket_cavity_raw() {
+    // Volume above the lid surface, to clear any exterior plate features
+    translate([0, 0, -6])
+    linear_extrude(height=6.01)
+    _lid_handle_pocket_footprint();
+    // Pocket body. The far wall slopes inward toward the floor, forming a
+    // finger scoop ahead of the folded grip bar.
+    _hull_pair(_lid_handle_pocket_depth()) {
+        _lid_handle_pocket_footprint();
+        _lid_handle_pocket_footprint(floor_level=true);
+    }
+}
+
+module _lid_handle_bosses(expand=0) {
+    eyelet_radius = _lid_handle_eyelet_radius();
+    boss_width = lid_handle_boss_width;
+    axis_offset = _lid_handle_axis_offset();
+    for (mx = [0:1:1], side = [0:1:1]) {
+        boss_x = (
+            side
+                ? lid_handle_arm_width / 2 + lid_handle_fit
+                : -(lid_handle_arm_width / 2 + lid_handle_fit + boss_width)
+        );
+        mirror([mx, 0, 0])
+        translate([_lid_handle_pivot_spacing() / 2 + boss_x - expand, 0, 0])
+        hull() {
+            translate([0, axis_offset, _lid_handle_axis_depth()])
+            rotate([0, 90, 0])
+            cylinder(h=boss_width + expand * 2, r=eyelet_radius + expand);
+            // Widened base merging into the pocket floor
+            translate([
+                0,
+                axis_offset - eyelet_radius - 2 - expand,
+                _lid_handle_pocket_depth() - 1
+            ])
+            cube([
+                boss_width + expand * 2,
+                (eyelet_radius + 2 + expand) * 2,
+                1 + expand
+            ]);
+        }
+    }
+}
+
+module _lid_handle_screw_holes() {
+    hole_start = lid_handle_arm_width / 2 + lid_handle_fit - 0.5;
+    thread_radius = (
+        (lid_handle_screw_diameter + screw_hole_diameter_size_tolerance) / 2
+    );
+    clearance_radius = (
+        (lid_handle_screw_diameter + screw_hole_diameter_fit) / 2
+    );
+    for (mx = [0:1:1])
+    mirror([mx, 0, 0])
+    translate([
+        _lid_handle_pivot_spacing() / 2,
+        _lid_handle_axis_offset(),
+        _lid_handle_axis_depth()
+    ]) {
+        // Thread-forming hole in the outer boss
+        rotate([0, 90, 0])
+        translate([0, 0, hole_start])
+        cylinder(h=lid_handle_boss_width + 4, r=thread_radius);
+        // Clearance hole through the inner boss
+        rotate([0, -90, 0])
+        translate([0, 0, hole_start])
+        cylinder(h=lid_handle_boss_width + 4, r=clearance_radius);
+    }
+}
+
+module _box_lid_handle_housing() {
+    housing_height = (
+        _lid_handle_pocket_depth() + lid_handle_floor_thickness
+    );
+    render(convexity=4)
+    difference() {
+        union() {
+            _hull_stack([housing_height - 2, 2]) {
+                _lid_handle_pocket_footprint(expand=lid_handle_pocket_wall);
+                _lid_handle_pocket_footprint(expand=lid_handle_pocket_wall);
+                offset(delta=-2)
+                _lid_handle_pocket_footprint(expand=lid_handle_pocket_wall);
+            }
+            _lid_handle_bosses();
+        }
+        rbox_lid_handle_pocket_cavity();
+        _lid_handle_screw_holes();
+    }
+}
+
+module _lid_handle_bail() {
+    arm_length = _lid_handle_arm_length();
+    bar_thickness = lid_handle_bar_thickness;
+    screw_hole_diameter_loose = (
+        lid_handle_screw_diameter
+        + screw_hole_diameter_size_tolerance
+        + screw_hole_diameter_fit
+    );
+    color("mintcream", 0.8)
+    render(convexity=4)
+    difference() {
+        union() {
+            for (mx = [0:1:1])
+            mirror([mx, 0, 0])
+            translate([_lid_handle_pivot_spacing() / 2, 0, 0]) {
+                // Pivot eyelet
+                rotate([0, 90, 0])
+                translate([0, 0, -lid_handle_arm_width / 2])
+                _rounded_cylinder(
+                    lid_handle_arm_width, _lid_handle_eyelet_radius()
+                );
+                // Arm
+                rotate([-90, 0, 0])
+                linear_extrude(height=arm_length)
+                _rounded_square(
+                    [lid_handle_arm_width, bar_thickness],
+                    $b_edge_radius,
+                    center=true
+                );
+            }
+            // Grip bar
+            translate([0, arm_length, 0])
+            rotate([0, 90, 0])
+            linear_extrude(height=_lid_handle_bar_length(), center=true)
+            _rounded_square(
+                [bar_thickness, lid_handle_bar_width],
+                lid_handle_bar_edge_radius,
+                center=true
+            );
+        }
+        // Pivot screw holes
+        for (mx = [0:1:1])
+        mirror([mx, 0, 0])
+        translate([_lid_handle_pivot_spacing() / 2, 0, 0])
+        rotate([0, 90, 0])
+        cylinder(
+            h=lid_handle_arm_width * 2,
+            d=screw_hole_diameter_loose,
+            center=true
+        );
+    }
+}
+
+module _lid_handle(placement="default") {
+    rbox_for_top()
+    if (_lid_handle_enabled()) {
+        if (placement == "print") {
+            translate([0, 0, lid_handle_bar_thickness / 2])
+            _lid_handle_bail();
+        } else {
+            // Folded flat into the lid pocket, in box top part coordinates
+            translate([
+                0, _lid_handle_axis_offset(), _lid_handle_axis_depth()
+            ])
+            _lid_handle_bail();
+        }
     }
 }
 

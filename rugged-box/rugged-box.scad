@@ -11,7 +11,7 @@ include <rugged-box-library.scad>;
 
 /* [Rendering] */
 // Part selection. Note: Assembled box previews show latches without chamfers for performance reasons.
-Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs]
+Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs]
 
 /* [Dimensions] */
 // All units in millimeters
@@ -52,6 +52,9 @@ Latch_Type = "clip"; // [clip: Clip, draw: Draw]
 
 // Optional handle for sufficiently wide boxes
 Handle = true;
+
+// Optional fold-flat carry handle recessed into the center of the lid
+Lid_Handle = false;
 
 // Optional label for sufficiently wide boxes
 Label = false;
@@ -98,6 +101,7 @@ rbox(
     top_grip=Top_Grip,
     hinge_end_stops=Hinge_End_Stops,
     handle=Handle,
+    lid_handle=Lid_Handle,
     label=Label,
     label_text=Label_Text,
     label_text_size=Label_Text_Size
