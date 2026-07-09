@@ -1,3 +1,16 @@
+# Gridfinity case system (fork of smkent/monoscad)
+
+This is a fork of [smkent/monoscad](https://github.com/smkent/monoscad)
+focused on the [Gridfinity Rugged Storage Box](gridfinity/rugged-box/).
+Fork additions: a fold-flat carry handle recessed into the center of the lid
+that preserves box-on-box stacking, and heavy-duty attachment options (M4
+hardware, enlarged eyelets and latches, denser stacking latches) rated for
+carrying stacks of loaded boxes (~5 kg per box, ~15-25 kg per stack). See
+[gridfinity/rugged-box/README.md](gridfinity/rugged-box/README.md) for
+details.
+
+---
+
 # My OpenSCAD models for 3D printing
 
 [![bulbasaur0 on Printables][printables-profile-badge]][printables-profile]
