@@ -47,7 +47,7 @@ Stacking_Latches = true;
 // Latch style
 Latch_Type = "draw"; // [clip: Clip, draw: Draw]
 
-// Add a third hinge for boxes 3U or wider
+// Add a third hinge for boxes 5U or wider
 Third_Hinge = true;
 
 // Optional front handle for sufficiently wide boxes
@@ -74,11 +74,10 @@ Lid_Handle = true;
 // ~25 kg per stack). Requires M4 hardware; see README for screw lengths.
 Heavy_Duty = true;
 
-// Stacking latch placement along the box sides. "Every grid boundary" adds a
-// stacking latch at every interior Gridfinity cell boundary (a superset of
-// the standard positions, so mixed-density boxes still latch to each other).
-// Requires Latch_Width + 2 * Rib_Width to be at most 40 mm.
-Stacking_Latch_Density = "standard"; // [standard: Standard, max: Every grid boundary]
+// Stacking latch placement along the box sides. "Every grid unit" adds a
+// stacking latch for each Gridfinity unit of box length and requires
+// Latch_Width + 2 * Rib_Width to be at most 40 mm.
+Stacking_Latch_Density = "standard"; // [standard: Standard, max: Every grid unit]
 
 /* [Advanced Size Adjustments] */
 // Base wall thickness in millimeters for most of the box
@@ -87,8 +86,8 @@ Wall_Thickness = 3.0; // [2.4:0.1:10]
 // Thickness in millimeters to add to the wall thickness for the box lip
 Lip_Thickness = 3.0; // [0.4:0.1:10]
 
-// Base thickness in millimeters of the support ribs. The latch ribs are this thick, while the hinge and side ribs are twice this thick. Note: the paired top hinge requires Latch_Width > 4 * Rib_Width + 0.6.
-Rib_Width = 6; // [1:0.1:20]
+// Base thickness in millimeters of the support ribs. The latch ribs are this thick, while the hinge and side ribs are twice this thick.
+Rib_Width = 8; // [1:0.1:20]
 
 // Latch width in millimeters
 Latch_Width = 28; // [5:1:50]
@@ -165,12 +164,10 @@ function rb_stacking_latch_positions() = (
     !Stacking_Latches
     ? []
     : Stacking_Latch_Density == "max"
-        // One stacking latch at every interior Gridfinity cell boundary.
-        // These positions are a superset of the standard ones, keeping
-        // mixed-density boxes latch-compatible when grid-aligned.
+        // One stacking latch per Gridfinity unit of box length
         ? [
-            for (i = [1:1:Length - 1])
-            i * l_grid - (l_grid * Length / 2)
+            for (i = [0:1:Length - 1])
+            (i + 0.5) * l_grid - (l_grid * Length / 2)
         ]
         : [
             let (points = [
@@ -430,4 +427,6 @@ module main() {
     }
 }
 
-main();
+probe_min = [0, 0, 0];
+probe_size = [1, 1, 1];
+intersection() { main(); translate(probe_min) cube(probe_size); }

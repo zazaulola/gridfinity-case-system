@@ -73,10 +73,11 @@ A fold-flat carry bail recessed into a pocket in the center of the lid:
   the bail; when raised, there is ~32 mm of finger clearance between the
   grip and the lid surface.
 * Requires a box at least 3 Gridfinity units wide and a top at least
-  2 units tall. On boxes 2 units long the pivot axis is offset from the lid
-  center (the pocket cannot be centered around it), so a single box hangs
-  with a slight tilt; stacks hang nearly level. On boxes 3+ units long the
-  axis is centered and the box hangs level.
+  2 units tall. On boxes 2-3 units long the pivot axis is offset from the
+  lid center (the pocket cannot be centered around it; ~29 mm at 2 units,
+  ~8 mm at 3 units), so a single box hangs with a slight tilt; stacks hang
+  nearly level. On boxes 4+ units long the axis is centered and the box
+  hangs level.
 * Print the `lid_handle` part flat as oriented; layers run along the bail
   plane, which loads the layer lines in tension/bending within the plane.
 * Assembly: place the bail eyelets between the boss pairs and drive the two
@@ -98,22 +99,35 @@ heavy-duty option reinforces.
   roughly 5 MPa or less per attachment at the target loads (PETG yields at
   ~50 MPa; short-term carrying loads leave a comfortable margin for creep
   and shock).
-* Default `Rib_Width` raised from 6 to 8 mm: thicker latch ribs and hinge
-  ribs, and longer thread engagement for the screws.
 * The optional third (center) hinge now engages on boxes **3+ units wide**
   (previously 5+).
-* With the default `Latch_Width` 28 and `Rib_Width` 8, attachment screws are
-  **M4x45** (`28 + 2 * 8 = 44`); check the console output (BOM echo) for the
+* With the default `Latch_Width` 28 and `Rib_Width` 6, attachment screws are
+  **M4x40** (`28 + 2 * 6 = 40`); check the console output (BOM echo) for the
   exact count and length for your configuration. Set `Heavy_Duty` to false
   to keep the original M3 sizing.
+* For even thicker ribs, raise `Rib_Width` together with `Latch_Width`: the
+  paired top hinge requires `Latch_Width > 4 * Rib_Width + 0.6` (for
+  example, `Rib_Width` 8 with `Latch_Width` 34 and M4x50 screws). Raising
+  `Rib_Width` alone silently degrades the top hinge to a single narrow
+  eyelet.
 
 ### Stacking latch density (`Stacking_Latch_Density`)
 
-For heavy stacks, `max` places one stacking latch per Gridfinity unit of box
-length on each side (a 2-unit box gets 2 per side, 4 total). This requires
-`Latch_Width + 2 * Rib_Width` ≤ 40 mm (for example, `Latch_Width` 24 with
-`Rib_Width` 8) so adjacent latches do not overlap. The default `standard`
-keeps the original placement.
+For heavy stacks, `max` places one stacking latch at every interior
+Gridfinity cell boundary on each side (a 4-unit-long box gets 3 per side
+instead of 2). These positions are a superset of the standard ones, so
+boxes with mixed density settings still latch to each other when
+grid-aligned; for boxes 2-3 units long, `max` equals `standard`. This
+option requires `Latch_Width + 2 * Rib_Width` ≤ 40 mm (satisfied by the
+defaults, 28 + 2 × 6 = 40) so adjacent latches do not overlap. The default
+`standard` keeps the original placement.
+
+### Other default changes in this fork
+
+* The front `Handle` option now defaults to **false** (the lid handle is the
+  primary carry); enable it in the customizer if you want both.
+* `Third_Hinge` and `Lid_Handle` default to true, `Heavy_Duty` defaults to
+  true.
 
 ### Print recommendations for load-rated boxes
 
@@ -129,6 +143,14 @@ keeps the original placement.
   direction.
 
 ## Hardware and Tools
+
+**Fork note:** with this fork's default `Heavy_Duty = true`, the hinges and
+latches use **M4** screws — **M4x40** hex socket head cap screws (DIN 912)
+at the default `Latch_Width` 28 / `Rib_Width` 6, driven with a 3 mm hex key.
+The lid handle additionally takes 2x **M3x20**. The console output (BOM
+echo) prints the exact screw count and length for your configuration. The
+rest of this section describes the original M3 sizing, which applies when
+`Heavy_Duty` is false.
 
 The hinges and latches are attached using M3 screws, **M3x40** by default.
 Depending on whether a handle or stacking latches are desired, a box may take
@@ -188,7 +210,8 @@ Ensure both `rugged-box-gridfinity.scad` and `rugged-box-library.scad` are
 placed in the same directory. Open `rugged-box-gridfinity.scad` in OpenSCAD.
 
 Select your desired dimensions and options in the OpenSCAD Customizer. Then, one
-at a time, select each part (top, bottom, latch, stacking latch, handle) in the
+at a time, select each part (top, bottom, latch, stacking latch, handle, lid
+handle) in the
 Part drop-down. For each part, perform a render (F6) and export to STL (F7).
 
 ![Customizer screenshot](images/readme/customizer-screenshot.png)

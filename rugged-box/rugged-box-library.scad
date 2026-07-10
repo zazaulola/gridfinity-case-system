@@ -58,6 +58,9 @@ handle_radius = 5;
 lid_handle_screw_diameter = 3;
 lid_handle_screw_length = 20;
 lid_handle_eyelet_size_proportion = 3.0;
+// Local hole fit so overrides of the main screw_diameter (heavy-duty M4)
+// cannot change the lid handle pivot fits
+lid_handle_screw_hole_fit = lid_handle_screw_diameter * 0.2;
 lid_handle_bar_thickness = 9;
 lid_handle_bar_width = 16;
 lid_handle_bar_max_length = 130;
@@ -2372,7 +2375,7 @@ module _lid_handle_screw_holes() {
         (lid_handle_screw_diameter + screw_hole_diameter_size_tolerance) / 2
     );
     clearance_radius = (
-        (lid_handle_screw_diameter + screw_hole_diameter_fit) / 2
+        (lid_handle_screw_diameter + lid_handle_screw_hole_fit) / 2
     );
     for (mx = [0:1:1])
     mirror([mx, 0, 0])
@@ -2384,7 +2387,7 @@ module _lid_handle_screw_holes() {
         // Thread-forming hole in the outer boss
         rotate([0, 90, 0])
         translate([0, 0, hole_start])
-        cylinder(h=lid_handle_boss_width + 4, r=thread_radius);
+        cylinder(h=lid_handle_boss_width + 2, r=thread_radius);
         // Clearance hole through the inner boss
         rotate([0, -90, 0])
         translate([0, 0, hole_start])
@@ -2418,7 +2421,7 @@ module _lid_handle_bail() {
     screw_hole_diameter_loose = (
         lid_handle_screw_diameter
         + screw_hole_diameter_size_tolerance
-        + screw_hole_diameter_fit
+        + lid_handle_screw_hole_fit
     );
     color("mintcream", 0.8)
     render(convexity=4)
