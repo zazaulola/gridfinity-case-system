@@ -7,7 +7,7 @@
 
 /* [Rendering] */
 // Part selection. Note: Assembled box previews show latches without chamfers for performance reasons.
-Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs, "top_grid_modifier": Top print modifier volume for Gridfinity lid]
+Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "axle_sleeve": Axle sleeve set, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs, "top_grid_modifier": Top print modifier volume for Gridfinity lid]
 
 /* [Dimensions] */
 // Interior side-to-side size in 42mm Gridfinity units
@@ -86,6 +86,14 @@ Stacking_Latch_Density = "standard"; // [standard: Standard, max: Every grid bou
 // cannot rotate in use, threads do not wear with reassembly, and cut
 // threaded rod can substitute for screws.
 Nut_Pockets = false;
+
+// Replace every long through screw with a printed bearing sleeve (8 mm)
+// spanning between the attachment ribs, retained by two short M4x12..20
+// screws driven into its bore from the rib outer faces. Latches and
+// hinges ride the smooth sleeve surface instead of screw threads, and no
+// screws longer than 20 mm are needed. Print the "axle_sleeve" part set.
+// Requires Heavy_Duty (M4 sizing).
+Axle_Sleeves = false;
 
 /* [Advanced Size Adjustments] */
 // Base wall thickness in millimeters for most of the box
@@ -409,6 +417,7 @@ module main() {
         hinge_end_stops=Hinge_End_Stops,
         handle=Handle,
         nut_pockets=Nut_Pockets,
+        axle_sleeves=Axle_Sleeves,
         lid_handle=Lid_Handle,
         lid_handle_stow_depth=(
             // Keep the folded handle below the bases of a box stacked on top

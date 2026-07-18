@@ -25,6 +25,16 @@ nut_pocket_width_tolerance = 0.35;
 // Extra pocket depth beyond the nut height
 nut_pocket_depth_tolerance = 0.4;
 
+// Axle sleeve outer diameter: a printed (or brass standoff) bearing sleeve
+// spanning between the attachment ribs. Rotating parts ride the smooth
+// sleeve surface, and the sleeve is retained by two short screws driven
+// into its bore from the rib outer faces, replacing the long through screw
+axle_sleeve_diameter = 8;
+// Diametral running fit for parts rotating on the sleeve
+axle_sleeve_fit = 0.4;
+// Snug fit for latch catch slots hooking over the sleeve
+axle_sleeve_catch_fit = 0.2;
+
 // Widen angle of box plain ribs
 plain_ribs_angle = 8;
 
@@ -131,6 +141,12 @@ label_max_height = 30;
  *    fit. Screws then clamp with nuts instead of thread-forming into the
  *    plastic: no thread wear, no screw rotation in use, and cut threaded
  *    rod can substitute for screws.
+ *  - axle_sleeves: Replace every long through screw with a printed
+ *    bearing sleeve spanning between the attachment ribs, retained by two
+ *    short screws (M4x12..20) driven into the sleeve bore from the rib
+ *    outer faces. Rotating parts ride the smooth sleeve surface instead
+ *    of screw threads. Latch, stacking latch, hinge, and handle bores
+ *    grow to the sleeve diameter. Requires M4 attachment sizing.
  *  - lid_handle: Add optional fold-flat carry handle recessed into the
  *    center of the box top for sufficiently large boxes
  *  - lid_handle_stow_depth: Depth below the box top outer surface at which
@@ -166,6 +182,7 @@ module rbox(
     hinge_end_stops=false,
     handle=false,
     nut_pockets=false,
+    axle_sleeves=false,
     lid_handle=false,
     lid_handle_stow_depth=1.0,
     label=false,
@@ -184,9 +201,17 @@ module rbox(
     $b_latch_type = latch_type;
     $b_latch_count = latch_count;
     $b_top_grip = top_grip;
+    assert(
+        !axle_sleeves || screw_diameter >= 4,
+        str(
+            "Axle sleeves require M4 attachment sizing (screw_diameter ",
+            screw_diameter, " is too small for the latch bores)"
+        )
+    );
     $b_hinge_end_stops = hinge_end_stops;
     $b_handle = handle;
     $b_nut_pockets = nut_pockets;
+    $b_axle_sleeves = axle_sleeves;
     $b_lid_handle = lid_handle;
     $b_lid_handle_stow_depth = lid_handle_stow_depth;
     $b_label = label;
@@ -291,6 +316,39 @@ module rbox_stacking_latch(placement="print") { _stacking_latch(placement); }
 module rbox_handle(placement="print") { _handle(placement); }
 
 module rbox_lid_handle(placement="print") { _lid_handle(placement); }
+
+// The full set of axle sleeves for the configured box, standing for print
+module rbox_axle_sleeves() {
+    rbox_for_bottom() {
+        latch_count = _compute_latch_count();
+        hinge_count = latch_count + (
+            (
+                $b_third_hinge_width > 0
+                && $b_inner_width >= $b_third_hinge_width
+            ) ? 1 : 0
+        );
+        stacking_count = len(rb_stacking_latch_positions()) * 2 * (
+            2 + (_stacking_latches_enabled() ? 1 : 0)
+        );
+        latch_sleeves = latch_count * 2 + stacking_count;
+        hinge_length = $b_latch_width - $b_rib_width * 2 - 0.4;
+        latch_length = $b_latch_width - 0.4;
+        color("mintcream", 0.8)
+        for (i = [0:1:hinge_count + latch_sleeves - 1]) {
+            translate([
+                (i % 5) * (axle_sleeve_diameter + 4),
+                floor(i / 5) * (axle_sleeve_diameter + 4),
+                0
+            ])
+            _axle_sleeve(i < hinge_count ? hinge_length : latch_length);
+        }
+        echo(str(
+            "Axle sleeve set: ", hinge_count, " hinge sleeves x ",
+            hinge_length, " mm and ", latch_sleeves,
+            " latch/stacking sleeves x ", latch_length, " mm"
+        ));
+    }
+}
 
 // Cavity to subtract for the lid handle pocket. Renders nothing if the lid
 // handle is disabled or unavailable. Subtract this from any custom top body
@@ -487,6 +545,8 @@ module rbox_part(part) {
         rbox_handle(placement="print");
     } else if (part == "lid_handle") {
         rbox_lid_handle(placement="print");
+    } else if (part == "axle_sleeve") {
+        rbox_axle_sleeves();
     } else if (part == "label") {
         rbox_label();
     }
@@ -517,6 +577,21 @@ module rbox_bom() {
                 + (_stacking_latches_enabled() ? 1 : 0)
             )
         );
+        if ($b_axle_sleeves) {
+            echo(str(
+                "Axle sleeves enabled: print the axle_sleeve part set (",
+                screw_count_base, " sleeves); each sleeve is retained by ",
+                "two short M", screw_diameter, "x12..20 screws (",
+                screw_count_base * 2, " total)",
+                _handle_enabled()
+                    ? str(
+                        "; the handle still uses 2 long ",
+                        _sstr(2, screw_length_base + $b_rib_width
+                            + handle_thickness)
+                    )
+                    : ""
+            ));
+        }
         if ($b_nut_pockets) {
             echo(str(
                 "Nut pockets enabled: one M", screw_diameter,
@@ -524,6 +599,7 @@ module rbox_bom() {
                 " threaded rod may substitute for screws"
             ));
         }
+        if (!$b_axle_sleeves)
         echo(str(
             "Box total screws needed: ",
             _sstr(screw_count_base, screw_length_base),
@@ -595,22 +671,30 @@ draw_latch_grip_angle = 45;
 draw_latch_grip_curve_radius = 16;
 draw_latch_thickness = latch_base_size / 2;
 draw_latch_handle_length = latch_base_size * 3.25;
-draw_latch_screw_eyelet_radius = screw_hole_diameter * 1.1;
 draw_latch_pin_handle_radius = screw_hole_diameter * 1.6;
 draw_latch_pin_radius = draw_latch_pin_handle_radius - 2.2;
 draw_latch_sep = 0.4;
 draw_latch_vsep = 0.6;
 draw_latch_body_width = latch_base_size - screw_hole_diameter / 2;
-draw_latch_pin_offset = [
+draw_latch_poly_div = 10;
+
+// The draw latch eyelet around the box hinge axle; grows to wrap the axle
+// sleeve when sleeves are enabled
+function _draw_latch_screw_eyelet_radius() = (
+    $b_axle_sleeves
+        ? max(screw_hole_diameter * 1.1, _pin_hole_loose() / 2 + 2.2)
+        : screw_hole_diameter * 1.1
+);
+
+function _draw_latch_pin_offset() = [
     (
-        draw_latch_screw_eyelet_radius
+        _draw_latch_screw_eyelet_radius()
         - draw_latch_pin_handle_radius
         - screw_hole_diameter * 0.1
     ),
     -draw_latch_handle_length,
     0
 ];
-draw_latch_poly_div = 10;
 
 // For _box_extrude and _box_corners_extrude
 corners_data = [
@@ -674,6 +758,27 @@ function _latch_offset_from_base() = (
 );
 
 function _latch_width() = ($b_latch_width - $b_size_tolerance * 2);
+
+// Diameter of the hole in rotating parts that ride the box attachment
+// axles: snug (latch catch slots) and loose (rotating bores)
+function _pin_hole_snug() = (
+    $b_axle_sleeves
+        ? axle_sleeve_diameter + axle_sleeve_catch_fit
+        : screw_hole_diameter + screw_hole_diameter_size_tolerance
+);
+
+function _pin_hole_loose() = (
+    $b_axle_sleeves
+        ? axle_sleeve_diameter + axle_sleeve_fit
+        : (
+            screw_hole_diameter
+            + screw_hole_diameter_size_tolerance
+            + screw_hole_diameter_fit
+        )
+);
+
+// Thread-forming bore of the printed axle sleeve for the attachment screws
+function _axle_sleeve_bore() = (screw_diameter <= 3 ? 2.6 : 3.5);
 
 // Hex nut width across flats (DIN 934) for the attachment screw size
 function _nut_width_across_flats() = (
@@ -1393,14 +1498,22 @@ module _box_screw_eyelet_body(width=0, angle=360) {
     _rounded_cylinder(width, screw_eyelet_radius, angle=angle);
 }
 
-module _box_screw_hole(width, increase_screw_diameter=false) {
-    // With nut pockets enabled, every attachment screw hole is clearance
-    // fit: screws clamp with nuts instead of thread-forming
+module _box_screw_hole(width, increase_screw_diameter=false, pin=false) {
+    // With nut pockets or axle sleeves enabled, attachment screw holes are
+    // clearance fit (screws clamp with nuts or thread into the sleeve
+    // instead of the ribs). Holes marked pin=true carry a rotating part
+    // and grow to the sleeve running fit when sleeves are enabled.
     screw_radius = 1/2 * (
-        screw_hole_diameter + (
-            (increase_screw_diameter || $b_nut_pockets)
-                ? screw_hole_diameter_fit
-                : screw_hole_diameter_size_tolerance
+        (pin && $b_axle_sleeves)
+            ? _pin_hole_loose()
+            : screw_hole_diameter + (
+                (
+                    increase_screw_diameter
+                    || $b_nut_pockets
+                    || $b_axle_sleeves
+                )
+                    ? screw_hole_diameter_fit
+                    : screw_hole_diameter_size_tolerance
             )
         );
     rotate([90, 0, 0])
@@ -1681,7 +1794,8 @@ module _box_hinge_ribs() {
         translate([$b_hinge_screw_offset, 0, $b_outer_height]) {
             _box_screw_hole(
                 $b_latch_width,
-                increase_screw_diameter = ($b_part == "top" ? true : false)
+                increase_screw_diameter = ($b_part == "top" ? true : false),
+                pin = ($b_part == "top")
             );
             // Nut pockets in the outer faces of the bottom hinge ribs;
             // the screw becomes a nut-clamped hinge pin that cannot
@@ -1879,7 +1993,7 @@ module _box_label(placement="default") {
 
 module _clip_latch_shape() {
     bw = latch_base_size - screw_hole_diameter / 2;
-    shd = screw_hole_diameter + screw_hole_diameter_size_tolerance;
+    shd = _pin_hole_snug();
     _round_shape($b_edge_radius)
     difference() {
         union() {
@@ -1896,7 +2010,7 @@ module _clip_latch_shape() {
             square([bw, $b_latch_screw_separation + latch_base_size * 2.5]);
         }
         // Hinge hole
-        circle(d=shd + screw_hole_diameter_fit);
+        circle(d=_pin_hole_loose());
         // Catch hole
         translate([0, $b_latch_screw_separation])
         hull()
@@ -1939,12 +2053,12 @@ module _draw_latch_each_segment(handle=false) {
 
 module _draw_latch_handle_curve_shape() {
     thick = draw_latch_thickness;
-    roff = draw_latch_pin_handle_radius - draw_latch_screw_eyelet_radius;
+    roff = draw_latch_pin_handle_radius - _draw_latch_screw_eyelet_radius();
     rr = draw_latch_pin_handle_radius;
     offset(-rr * 1.25)
     offset(rr * 1.25)
     union() {
-        translate([-draw_latch_pin_handle_radius + draw_latch_screw_eyelet_radius, 0])
+        translate([-draw_latch_pin_handle_radius + _draw_latch_screw_eyelet_radius(), 0])
         circle(draw_latch_pin_handle_radius);
         translate([-roff + rr - thick, 0]) {
             translate([0, -thick])
@@ -1976,22 +2090,18 @@ module _draw_latch_handle_body_shape() {
     difference() {
         union() {
             hull() {
-                circle(r=draw_latch_screw_eyelet_radius);
-                translate([-draw_latch_pin_handle_radius + draw_latch_screw_eyelet_radius, -draw_latch_handle_length, 0])
+                circle(r=_draw_latch_screw_eyelet_radius());
+                translate([-draw_latch_pin_handle_radius + _draw_latch_screw_eyelet_radius(), -draw_latch_handle_length, 0])
                 circle(r=draw_latch_pin_handle_radius);
             }
             translate([0, -draw_latch_handle_length])
             _draw_latch_handle_curve_shape();
         }
         // Pin hole
-        translate(draw_latch_pin_offset)
+        translate(_draw_latch_pin_offset())
         circle(r=draw_latch_pin_radius + draw_latch_sep);
         // Screw hole
-        circle(d=(
-            screw_hole_diameter
-            + screw_hole_diameter_size_tolerance
-            + screw_hole_diameter_fit
-        ));
+        circle(d=_pin_hole_loose());
     }
 }
 
@@ -2107,7 +2217,7 @@ module _draw_latch_handle() {
             _draw_latch_handle_body_shape();
 
             translate([
-                draw_latch_screw_eyelet_radius,
+                _draw_latch_screw_eyelet_radius(),
                 -draw_latch_handle_length - draw_latch_thickness
             ])
             translate([draw_latch_body_curve_radius, 0, 0])
@@ -2122,11 +2232,11 @@ module _draw_latch_handle() {
             translate([-draw_latch_sep / 2, draw_latch_sep / 2])
             _draw_latch_attach_shape(sep=-draw_latch_sep);
             translate([0, -draw_latch_handle_length, 0])
-            translate([-draw_latch_pin_handle_radius + draw_latch_screw_eyelet_radius, 0])
+            translate([-draw_latch_pin_handle_radius + _draw_latch_screw_eyelet_radius(), 0])
             hull() {
                 circle(r=draw_latch_pin_radius + draw_latch_sep);
                 translate([latch_base_size * 1.5 + draw_latch_sep, draw_latch_sep])
-                circle(draw_latch_screw_eyelet_radius);
+                circle(_draw_latch_screw_eyelet_radius());
             }
         }
     }
@@ -2138,7 +2248,7 @@ module _draw_latch_attach_shape_base(sep=0.4) {
     pin_latch_size_delta = pin_diameter - draw_latch_thickness;
 
     _draw_latch_catch_shape_body();
-    translate(draw_latch_pin_offset)
+    translate(_draw_latch_pin_offset())
     hull() {
         circle(r=draw_latch_pin_radius);
         for (i = [-1, 1])
@@ -2178,7 +2288,7 @@ module _draw_latch_catch_shape_body() {
     pin_latch_size_delta = pin_diameter - draw_latch_thickness;
 
     // Body
-    translate([draw_latch_screw_eyelet_radius + draw_latch_thickness + draw_latch_sep, 0])
+    translate([_draw_latch_screw_eyelet_radius() + draw_latch_thickness + draw_latch_sep, 0])
     hull() {
         translate([0, -draw_latch_handle_length + latch_offset_from_pin - pin_latch_size_delta])
         circle(draw_latch_thickness);
@@ -2191,7 +2301,7 @@ module _draw_latch_catch_shape_body() {
 module _draw_latch_catch_shape_hook() {
     compress_ratio = 0.65;
     catchsep = 0;
-    outr = draw_latch_screw_eyelet_radius + draw_latch_thickness * 2;
+    outr = _draw_latch_screw_eyelet_radius() + draw_latch_thickness * 2;
 
     translate([draw_latch_sep, $b_latch_screw_separation])
     translate([0, -latch_base_size + screw_diameter / 2 - catchsep])
@@ -2215,20 +2325,20 @@ module _draw_latch_catch_shape_hook() {
             circle(d=draw_latch_thickness * 1.5);
         }
         cr = compress_ratio * 0.8;
-        translate([-draw_latch_screw_eyelet_radius * cr, 0])
+        translate([-_draw_latch_screw_eyelet_radius() * cr, 0])
         for (mx = [0:1:1])
         mirror([mx, 0])
         scale([mx ? 1 - (1 - cr) / 1.00 : 1 + cr, 1])
         intersection() {
             color(mx ? "lightblue" : "lightgreen", 0.6)
-            circle(r=draw_latch_screw_eyelet_radius);
-            square(draw_latch_screw_eyelet_radius);
+            circle(r=_draw_latch_screw_eyelet_radius());
+            square(_draw_latch_screw_eyelet_radius());
         }
     }
 }
 
 module _draw_latch_pin_center_hole_shape() {
-    translate(draw_latch_pin_offset)
+    translate(_draw_latch_pin_offset())
     circle(r=(draw_latch_pin_radius + draw_latch_sep) / 5);
 }
 
@@ -2241,7 +2351,7 @@ module _draw_latch_catch() {
                 _draw_latch_catch_shape_hook();
             }
             // Pin
-            translate(draw_latch_pin_offset)
+            translate(_draw_latch_pin_offset())
             circle(r=draw_latch_pin_radius);
         }
         _draw_latch_pin_center_hole_shape();
@@ -2260,9 +2370,9 @@ module _draw_latch_part() {
         color("lightgray", 0.8)
         _draw_latch_handle();
         color("mintcream", 0.8)
-        translate(draw_latch_pin_offset)
+        translate(_draw_latch_pin_offset())
         rotate([0, 0, $b_preview_box_open ? -45 : 0])
-        translate(-draw_latch_pin_offset)
+        translate(-_draw_latch_pin_offset())
         _draw_latch_catch();
     }
 }
@@ -2303,7 +2413,7 @@ module _stacking_latch_shape() {
     bw = latch_base_size - screw_hole_diameter / 2;
     blsep = min(catch_heights);
     slcatch = max(catch_heights);
-    shd = screw_hole_diameter + screw_hole_diameter_size_tolerance;
+    shd = _pin_hole_snug();
     mirror([stacking_latch_catch_offset < 0 ? 1 : 0, 0, 0])
     _round_shape($b_edge_radius)
     difference() {
@@ -2328,7 +2438,7 @@ module _stacking_latch_shape() {
             }
         }
         // Hinge hole
-        circle(d=shd + screw_hole_diameter_fit);
+        circle(d=_pin_hole_loose());
         // Catch hole
         translate([0, blsep])
         hull()
@@ -2359,6 +2469,17 @@ module _stacking_latch_part() {
         height=_latch_width(), r=latch_edge_radius, center=true
     )
     _stacking_latch_shape();
+}
+
+// Axle sleeves
+
+module _axle_sleeve(length) {
+    render(convexity=2)
+    difference() {
+        cylinder(length, d=axle_sleeve_diameter);
+        translate([0, 0, -0.5])
+        cylinder(length + 1, d=_axle_sleeve_bore());
+    }
 }
 
 module _stacking_latch(placement="default") {

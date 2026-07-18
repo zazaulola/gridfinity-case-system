@@ -11,7 +11,7 @@ include <rugged-box-library.scad>;
 
 /* [Rendering] */
 // Part selection. Note: Assembled box previews show latches without chamfers for performance reasons.
-Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs]
+Part = "assembled_open"; // ["bottom": Bottom, "top": Top, "latch": Latch, "stacking_latch": Stacking latch, "handle": Handle, "lid_handle": Lid carry handle, "axle_sleeve": Axle sleeve set, "label": Label, "side-by-side": Top and Bottom side-by-side, "assembled_open": Assembled open, "assembled_closed": Assembled closed, "bottom_modifier": Bottom print modifier volume for attachment ribs, "top_modifier": Top print modifier volume for attachment ribs]
 
 /* [Dimensions] */
 // All units in millimeters
@@ -59,6 +59,9 @@ Lid_Handle = false;
 // Cut hex nut pockets into the attachment rib faces; screws clamp with nuts instead of thread-forming into plastic
 Nut_Pockets = false;
 
+// Replace long through screws with printed bearing sleeves retained by two short M4x12..20 screws each; requires M4-sized attachments (see the gridfinity variant's Heavy_Duty overrides)
+Axle_Sleeves = false;
+
 // Optional label for sufficiently wide boxes
 Label = false;
 
@@ -105,6 +108,7 @@ rbox(
     hinge_end_stops=Hinge_End_Stops,
     handle=Handle,
     nut_pockets=Nut_Pockets,
+    axle_sleeves=Axle_Sleeves,
     lid_handle=Lid_Handle,
     label=Label,
     label_text=Label_Text,

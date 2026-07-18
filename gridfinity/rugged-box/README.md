@@ -131,6 +131,27 @@ Cap screw heads (7 mm across) partially recess into the pockets on the
 head side as a bonus. Nut pockets and screw length: the stock length still
 works — the nut sits inside the pocket flush with the rib face.
 
+### Axle sleeves: short common screws only (`Axle_Sleeves`, default off)
+
+Replaces every long M4x40 through screw with a printed **8 mm bearing
+sleeve** spanning between the attachment ribs, retained by two short
+**M4x12..20** screws driven into its bore from the rib outer faces —
+lengths every hardware kit already contains. Benefits:
+
+* No screws longer than 20 mm anywhere in the box (the lid handle already
+  uses M3x20 and the level tray is all-printed).
+* Latches and hinges rotate on the smooth sleeve surface instead of screw
+  threads: far larger bearing area, no thread abrasion of the plastic
+  bores, and the sleeve is a cheap replaceable wear part.
+* An 8 mm round brass standoff with M4 threads (female-female) is a
+  drop-in metal substitute for the printed sleeve.
+
+Print the `axle_sleeve` part set (sleeve counts and both lengths are
+echoed to the console). Latch, stacking latch, hinge, and handle bores
+grow to ride the sleeve, so render **all** parts with the option enabled —
+sleeve-mode latches do not fit a non-sleeve box. Requires `Heavy_Duty`
+(M4 sizing); the front `Handle` option still uses long screws.
+
 ### Stacking latch density (`Stacking_Latch_Density`)
 
 For heavy stacks, `max` places one stacking latch at every interior
