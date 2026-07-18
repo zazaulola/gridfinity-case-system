@@ -111,6 +111,26 @@ heavy-duty option reinforces.
   `Rib_Width` alone silently degrades the top hinge to a single narrow
   eyelet.
 
+### Hex nut pockets (`Nut_Pockets`, default off)
+
+Cuts DIN 934 hex nut pockets into the outward faces of the attachment ribs
+(latches, stacking latches, and both outer faces of the bottom hinge ribs)
+and enlarges every attachment screw hole to clearance fit. One nut per
+screw. Benefits:
+
+* Hinge screws become nut-clamped hinge pins: opening and closing the lid
+  cannot rotate or back the screw out of formed plastic threads. (Without
+  this option the tight fit in the bottom hinge ribs is intentional — the
+  screw thread-forms there and stays fixed while the lid's loose eyelet
+  rotates on the shank; if your printed lid eyelet is also tight, ream it
+  to ~4.2-4.5 mm for M4.)
+* Threads no longer wear with repeated disassembly.
+* Cut lengths of M4 threaded rod can substitute for screws.
+
+Cap screw heads (7 mm across) partially recess into the pockets on the
+head side as a bonus. Nut pockets and screw length: the stock length still
+works — the nut sits inside the pocket flush with the rib face.
+
 ### Stacking latch density (`Stacking_Latch_Density`)
 
 For heavy stacks, `max` places one stacking latch at every interior

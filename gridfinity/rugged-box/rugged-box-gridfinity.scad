@@ -80,6 +80,13 @@ Heavy_Duty = true;
 // Requires Latch_Width + 2 * Rib_Width to be at most 40 mm.
 Stacking_Latch_Density = "standard"; // [standard: Standard, max: Every grid boundary]
 
+// Cut hex nut pockets (DIN 934) into the outward faces of the attachment
+// ribs and enlarge all attachment screw holes to clearance fit. Screws
+// clamp with nuts instead of thread-forming into plastic: hinge pins
+// cannot rotate in use, threads do not wear with reassembly, and cut
+// threaded rod can substitute for screws.
+Nut_Pockets = false;
+
 /* [Advanced Size Adjustments] */
 // Base wall thickness in millimeters for most of the box
 Wall_Thickness = 3.0; // [2.4:0.1:10]
@@ -401,6 +408,7 @@ module main() {
         top_grip=Top_Grip,
         hinge_end_stops=Hinge_End_Stops,
         handle=Handle,
+        nut_pockets=Nut_Pockets,
         lid_handle=Lid_Handle,
         lid_handle_stow_depth=(
             // Keep the folded handle below the bases of a box stacked on top

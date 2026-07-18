@@ -56,6 +56,9 @@ Handle = true;
 // Optional fold-flat carry handle recessed into the center of the lid
 Lid_Handle = false;
 
+// Cut hex nut pockets into the attachment rib faces; screws clamp with nuts instead of thread-forming into plastic
+Nut_Pockets = false;
+
 // Optional label for sufficiently wide boxes
 Label = false;
 
@@ -101,6 +104,7 @@ rbox(
     top_grip=Top_Grip,
     hinge_end_stops=Hinge_End_Stops,
     handle=Handle,
+    nut_pockets=Nut_Pockets,
     lid_handle=Lid_Handle,
     label=Label,
     label_text=Label_Text,

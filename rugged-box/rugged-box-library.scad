@@ -20,6 +20,11 @@ screw_diameter = 3; // M3
 // Decrease screw hole diameter just slightly for better thread-forming fit
 screw_hole_diameter_size_tolerance = -0.1;
 
+// Hex nut pocket fit added to the nut width across flats
+nut_pocket_width_tolerance = 0.35;
+// Extra pocket depth beyond the nut height
+nut_pocket_depth_tolerance = 0.4;
+
 // Widen angle of box plain ribs
 plain_ribs_angle = 8;
 
@@ -121,6 +126,11 @@ label_max_height = 30;
  *  - top_grip: Add optional grip to front of box top
  *  - hinge_end_stops: Add optional hinge end stops to box bottom hinges
  *  - handle: Add optional handle for sufficiently wide boxes
+ *  - nut_pockets: Cut hex nut pockets into the outward faces of the
+ *    attachment ribs and enlarge all attachment screw holes to clearance
+ *    fit. Screws then clamp with nuts instead of thread-forming into the
+ *    plastic: no thread wear, no screw rotation in use, and cut threaded
+ *    rod can substitute for screws.
  *  - lid_handle: Add optional fold-flat carry handle recessed into the
  *    center of the box top for sufficiently large boxes
  *  - lid_handle_stow_depth: Depth below the box top outer surface at which
@@ -155,6 +165,7 @@ module rbox(
     top_grip=false,
     hinge_end_stops=false,
     handle=false,
+    nut_pockets=false,
     lid_handle=false,
     lid_handle_stow_depth=1.0,
     label=false,
@@ -175,6 +186,7 @@ module rbox(
     $b_top_grip = top_grip;
     $b_hinge_end_stops = hinge_end_stops;
     $b_handle = handle;
+    $b_nut_pockets = nut_pockets;
     $b_lid_handle = lid_handle;
     $b_lid_handle_stow_depth = lid_handle_stow_depth;
     $b_label = label;
@@ -505,6 +517,13 @@ module rbox_bom() {
                 + (_stacking_latches_enabled() ? 1 : 0)
             )
         );
+        if ($b_nut_pockets) {
+            echo(str(
+                "Nut pockets enabled: one M", screw_diameter,
+                " hex nut (DIN 934) per screw; cut M", screw_diameter,
+                " threaded rod may substitute for screws"
+            ));
+        }
         echo(str(
             "Box total screws needed: ",
             _sstr(screw_count_base, screw_length_base),
@@ -655,6 +674,22 @@ function _latch_offset_from_base() = (
 );
 
 function _latch_width() = ($b_latch_width - $b_size_tolerance * 2);
+
+// Hex nut width across flats (DIN 934) for the attachment screw size
+function _nut_width_across_flats() = (
+    screw_diameter == 4 ? 7
+        : screw_diameter == 3 ? 5.5
+            : screw_diameter * 1.8
+);
+
+// Hex nut height (DIN 934) for the attachment screw size
+function _nut_height() = (
+    screw_diameter == 4 ? 3.2
+        : screw_diameter == 3 ? 2.4
+            : screw_diameter * 0.8
+);
+
+function _nut_pocket_depth() = _nut_height() + nut_pocket_depth_tolerance;
 
 function _stacking_latches_enabled() = (
     $b_outer_height > stacking_latch_screw_separation * 2.0
@@ -1359,9 +1394,11 @@ module _box_screw_eyelet_body(width=0, angle=360) {
 }
 
 module _box_screw_hole(width, increase_screw_diameter=false) {
+    // With nut pockets enabled, every attachment screw hole is clearance
+    // fit: screws clamp with nuts instead of thread-forming
     screw_radius = 1/2 * (
         screw_hole_diameter + (
-            increase_screw_diameter
+            (increase_screw_diameter || $b_nut_pockets)
                 ? screw_hole_diameter_fit
                 : screw_hole_diameter_size_tolerance
             )
@@ -1369,6 +1406,25 @@ module _box_screw_hole(width, increase_screw_diameter=false) {
     rotate([90, 0, 0])
     translate([0, 0, -width])
     cylinder(width * 2, screw_radius, screw_radius);
+}
+
+/*
+ * Hex nut pocket(s) coaxial with an attachment screw hole. The screw hole
+ * axis runs along local Y; the pocket is cut inward from the face at local
+ * y = -width/2 (the outward face of paired attachment ribs), or from both
+ * faces with both=true.
+ */
+module _box_screw_nut_pocket(width=$b_rib_width, both=false) {
+    pocket_radius = (
+        (_nut_width_across_flats() + nut_pocket_width_tolerance)
+        / cos(30) / 2
+    );
+    for (my = (both ? [0:1:1] : [0:1:0]))
+    mirror([0, my, 0])
+    rotate([90, 0, 0])
+    translate([0, 0, width / 2 - _nut_pocket_depth()])
+    rotate([0, 0, 30])
+    cylinder(_nut_pocket_depth() + 0.01, pocket_radius, pocket_radius, $fn=6);
 }
 
 // Box latch attachments
@@ -1420,8 +1476,12 @@ module _box_latch_rib() {
         _box_latch_rib_base();
         // Screw hole
         translate([$b_latch_screw_offset, 0, 0])
-        translate([0, 0, _latch_offset_from_base()])
-        _box_screw_hole(width=$b_rib_width);
+        translate([0, 0, _latch_offset_from_base()]) {
+            _box_screw_hole(width=$b_rib_width);
+            if ($b_nut_pockets) {
+                _box_screw_nut_pocket();
+            }
+        }
     }
 }
 
@@ -1481,8 +1541,12 @@ module _box_stacking_latch_rib() {
         // Screw hole
         for (sep = sep_positions)
         translate([$b_latch_screw_offset, 0, 0])
-        translate([0, 0, sep])
-        _box_screw_hole(width=$b_rib_width);
+        translate([0, 0, sep]) {
+            _box_screw_hole(width=$b_rib_width);
+            if ($b_nut_pockets) {
+                _box_screw_nut_pocket();
+            }
+        }
     }
 }
 
@@ -1614,11 +1678,21 @@ module _box_hinge_ribs() {
             0,
             ($b_part == "top") ? top_hinge_eyelet_position_tolerance : 0
         ])
-        translate([$b_hinge_screw_offset, 0, $b_outer_height])
-        _box_screw_hole(
-            $b_latch_width,
-            increase_screw_diameter = ($b_part == "top" ? true : false)
-        );
+        translate([$b_hinge_screw_offset, 0, $b_outer_height]) {
+            _box_screw_hole(
+                $b_latch_width,
+                increase_screw_diameter = ($b_part == "top" ? true : false)
+            );
+            // Nut pockets in the outer faces of the bottom hinge ribs;
+            // the screw becomes a nut-clamped hinge pin that cannot
+            // rotate with the lid
+            if ($b_nut_pockets && $b_part == "bottom") {
+                _box_screw_nut_pocket(
+                    width=$b_latch_width + $b_rib_width * 2,
+                    both=true
+                );
+            }
+        }
     }
 }
 
