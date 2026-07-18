@@ -99,6 +99,25 @@ lid_handle_scoop_inset = 6;
 lid_handle_swing_margin = 2;
 lid_handle_fit = 0.4;
 
+// Split lid handle: two point-symmetric half-bails on parallel central
+// axes, folding inward past each other (arms interleaved along X) and
+// rising to a self-clamping X-arch whose grip bars press together under
+// load. Four pivots halve the per-pivot load; the pocket is symmetric
+// and shorter than the single bail's, and the box hangs level on every
+// box size.
+split_handle_eyelet_radius = 4.0;
+split_handle_bar_thickness = 8;
+split_handle_bar_width = 8;
+split_handle_arm_width = 8;
+// Axis offset from the lid center
+split_handle_axis_offset = 9;
+// Axis-to-bar-center arm length
+split_handle_arm_length = 34;
+// Inboard shift of each half's inner arm, creating the interleave slots
+split_handle_arm_slot = 11;
+split_handle_boss_width = 5;
+split_handle_screw_length = 20;
+
 // Label size
 label_thickness = 2;
 label_fit_thickness = 0.1;
@@ -149,6 +168,11 @@ label_max_height = 30;
  *    grow to the sleeve diameter. Requires M4 attachment sizing.
  *  - lid_handle: Add optional fold-flat carry handle recessed into the
  *    center of the box top for sufficiently large boxes
+ *  - lid_handle_style: "bail" for a single fold-flat bail, or "split" for
+ *    two point-symmetric half-bails on parallel central axes that fold
+ *    inward past each other and rise to a self-clamping X-arch. The split
+ *    style has a shorter symmetric pocket, four pivots sharing the load,
+ *    and hangs level on every box size.
  *  - lid_handle_stow_depth: Depth below the box top outer surface at which
  *    the highest point of the folded lid handle rests. Set this deeper than
  *    any exterior stacking features so stacked boxes clear the folded handle.
@@ -184,6 +208,7 @@ module rbox(
     nut_pockets=false,
     axle_sleeves=false,
     lid_handle=false,
+    lid_handle_style="bail",
     lid_handle_stow_depth=1.0,
     label=false,
     label_text="",
@@ -213,6 +238,7 @@ module rbox(
     $b_nut_pockets = nut_pockets;
     $b_axle_sleeves = axle_sleeves;
     $b_lid_handle = lid_handle;
+    $b_lid_handle_style = lid_handle_style;
     $b_lid_handle_stow_depth = lid_handle_stow_depth;
     $b_label = label;
     $b_label_text = label_text;
@@ -617,10 +643,17 @@ module rbox_bom() {
             ) : ""
         ));
         if (_lid_handle_enabled()) {
-            echo(str(
-                "Lid handle screws needed: 2 M",
-                lid_handle_screw_diameter, "x", lid_handle_screw_length
-            ));
+            echo(_lid_handle_split()
+                ? str(
+                    "Lid handle screws needed: 4 M",
+                    lid_handle_screw_diameter, "x18..",
+                    split_handle_screw_length,
+                    " (split handle: two identical halves)"
+                )
+                : str(
+                    "Lid handle screws needed: 2 M",
+                    lid_handle_screw_diameter, "x", lid_handle_screw_length
+                ));
         }
     }
 
@@ -842,8 +875,24 @@ function _label_enabled() = (
 // the box hinge side (+Y). All pivot hardware and the folded bail stay below
 // the configured stow depth so items stacked on the box top clear the handle.
 
+function _lid_handle_split() = ($b_lid_handle_style == "split");
+
 function _lid_handle_eyelet_radius() = (
-    lid_handle_screw_diameter * lid_handle_eyelet_size_proportion / 2
+    _lid_handle_split()
+        ? split_handle_eyelet_radius
+        : lid_handle_screw_diameter * lid_handle_eyelet_size_proportion / 2
+);
+
+function _lid_handle_bar_thickness() = (
+    _lid_handle_split() ? split_handle_bar_thickness : lid_handle_bar_thickness
+);
+
+function _lid_handle_arm_width_style() = (
+    _lid_handle_split() ? split_handle_arm_width : lid_handle_arm_width
+);
+
+function _lid_handle_boss_width_style() = (
+    _lid_handle_split() ? split_handle_boss_width : lid_handle_boss_width
 );
 
 // Depth of the pivot axis below the box top outer surface
@@ -854,16 +903,20 @@ function _lid_handle_axis_depth() = (
 // Depth of the pocket floor below the box top outer surface
 function _lid_handle_pocket_depth() = (
     _lid_handle_axis_depth()
-    + max(_lid_handle_eyelet_radius(), lid_handle_bar_thickness / 2)
+    + max(_lid_handle_eyelet_radius(), _lid_handle_bar_thickness() / 2)
     + 0.3
 );
 
 function _lid_handle_arm_length() = (
-    // When raised, the grip bar width is vertical; its underside sits
-    // lid_handle_grip_clearance above the box top surface
-    lid_handle_grip_clearance
-    + _lid_handle_axis_depth()
-    + lid_handle_bar_width / 2
+    _lid_handle_split()
+        ? split_handle_arm_length
+        // When raised, the grip bar width is vertical; its underside sits
+        // lid_handle_grip_clearance above the box top surface
+        : (
+            lid_handle_grip_clearance
+            + _lid_handle_axis_depth()
+            + lid_handle_bar_width / 2
+        )
 );
 
 // Interior area available for the pocket, as [width, length]
@@ -876,32 +929,43 @@ function _lid_handle_bar_length() = (
     min(
         lid_handle_bar_max_length,
         _lid_handle_usable_area()[0]
-        - 2 * (lid_handle_fit + lid_handle_boss_width)
+        - 2 * (lid_handle_fit + _lid_handle_boss_width_style())
     )
 );
 
 function _lid_handle_pivot_spacing() = (
-    _lid_handle_bar_length() - lid_handle_arm_width
+    _lid_handle_bar_length() - _lid_handle_arm_width_style()
 );
 
 // Clear space between the inner pivot bosses
 function _lid_handle_grip_span() = (
     _lid_handle_pivot_spacing()
-    - lid_handle_arm_width
-    - (lid_handle_fit + lid_handle_boss_width) * 2
+    - _lid_handle_arm_width_style()
+    - (lid_handle_fit + _lid_handle_boss_width_style()) * 2
 );
 
 // Pocket extent ahead of the pivot axis, in the fold direction
 function _lid_handle_pocket_reach() = (
-    _lid_handle_arm_length()
-    + lid_handle_bar_width / 2
-    + lid_handle_fit
-    + lid_handle_finger_room
+    _lid_handle_split()
+        // Symmetric: folded half-bail tip from the lid center
+        ? (
+            split_handle_arm_length - split_handle_axis_offset
+            + split_handle_bar_width / 2
+            + lid_handle_fit + lid_handle_swing_margin
+        )
+        : (
+            _lid_handle_arm_length()
+            + lid_handle_bar_width / 2
+            + lid_handle_fit
+            + lid_handle_finger_room
+        )
 );
 
 // Pocket extent behind the pivot axis
 function _lid_handle_pocket_back() = (
-    _lid_handle_eyelet_radius() + lid_handle_fit + lid_handle_swing_margin
+    _lid_handle_split()
+        ? _lid_handle_pocket_reach()
+        : _lid_handle_eyelet_radius() + lid_handle_fit + lid_handle_swing_margin
 );
 
 function _lid_handle_pocket_length() = (
@@ -909,9 +973,12 @@ function _lid_handle_pocket_length() = (
 );
 
 // Y position of the pivot axis: centered when space allows so the box hangs
-// level, otherwise shifted just enough for the folded bail to fit
+// level, otherwise shifted just enough for the folded bail to fit. The
+// split style is always centered (its two axes sit at +-split_handle_axis_offset).
 function _lid_handle_axis_offset() = (
-    min(0, _lid_handle_usable_area()[1] / 2 - _lid_handle_pocket_reach())
+    _lid_handle_split()
+        ? 0
+        : min(0, _lid_handle_usable_area()[1] / 2 - _lid_handle_pocket_reach())
 );
 
 function _lid_handle_enabled() = (
@@ -2505,7 +2572,9 @@ module _lid_handle_pocket_footprint(expand=0, floor_level=false) {
     back = _lid_handle_pocket_back();
     reach = (
         _lid_handle_pocket_reach()
-        - (floor_level ? lid_handle_scoop_inset : 0)
+        // The split style needs no finger scoop: the halves are raised by
+        // dragging their textured bars toward the center
+        - ((floor_level && !_lid_handle_split()) ? lid_handle_scoop_inset : 0)
     );
     translate([0, _lid_handle_axis_offset() + (reach - back) / 2])
     _rounded_square(
@@ -2533,7 +2602,137 @@ module _lid_handle_pocket_cavity_raw() {
     }
 }
 
+// X centers of one split half's two interleaved arms, in half-local
+// coordinates (the other half is the same part rotated 180 degrees)
+function _split_handle_arm_slots() = [
+    -(_lid_handle_pivot_spacing() / 2),
+    _lid_handle_pivot_spacing() / 2 - split_handle_arm_slot
+];
+
+// Boss block shape shared by both split-handle pivot bosses: pivot
+// cylinder blended into a base on the pocket floor. Origin at the pivot
+// axis, extending +X by width.
+module _split_handle_boss_block(width, expand=0) {
+    er = split_handle_eyelet_radius;
+    hull() {
+        rotate([0, 90, 0])
+        translate([0, 0, -expand])
+        cylinder(h=width + expand * 2, r=er + expand);
+        translate([
+            -expand,
+            -er - 2 - expand,
+            _lid_handle_pocket_depth() - _lid_handle_axis_depth() - 1
+        ])
+        cube([
+            width + expand * 2,
+            (er + 2 + expand) * 2,
+            1 + expand
+        ]);
+    }
+}
+
+module _split_handle_bosses(expand=0) {
+    aw = split_handle_arm_width;
+    bw = split_handle_boss_width;
+    for (r = [0, 180])
+    rotate([0, 0, r])
+    translate([0, split_handle_axis_offset, _lid_handle_axis_depth()])
+    for (sx = _split_handle_arm_slots(), side = [0:1:1]) {
+        translate([
+            sx + (
+                side
+                    ? aw / 2 + lid_handle_fit
+                    : -(aw / 2 + lid_handle_fit + bw)
+            ),
+            0, 0
+        ])
+        _split_handle_boss_block(bw, expand);
+    }
+}
+
+module _split_handle_screw_holes() {
+    hole_start = split_handle_arm_width / 2 + lid_handle_fit - 0.5;
+    thread_radius = (
+        (lid_handle_screw_diameter + screw_hole_diameter_size_tolerance) / 2
+    );
+    clearance_radius = (
+        (lid_handle_screw_diameter + lid_handle_screw_hole_fit) / 2
+    );
+    for (r = [0, 180])
+    rotate([0, 0, r])
+    translate([0, split_handle_axis_offset, _lid_handle_axis_depth()])
+    for (sx = _split_handle_arm_slots())
+    translate([sx, 0, 0]) {
+        // Thread-forming hole in the +X boss
+        rotate([0, 90, 0])
+        translate([0, 0, hole_start])
+        cylinder(h=split_handle_boss_width + 2, r=thread_radius);
+        // Clearance hole through the -X boss
+        rotate([0, -90, 0])
+        translate([0, 0, hole_start])
+        cylinder(h=split_handle_boss_width + 2, r=clearance_radius);
+    }
+}
+
+// One split-handle half in local coordinates: pivot axis along X at the
+// origin, folding toward -Y. Uniform thickness; prints flat. The second
+// half is the same part rotated 180 degrees about Z.
+module _split_handle_half() {
+    arm_length = split_handle_arm_length;
+    t = split_handle_bar_thickness;
+    bar_length = _lid_handle_bar_length();
+    screw_hole_diameter_loose = (
+        lid_handle_screw_diameter
+        + screw_hole_diameter_size_tolerance
+        + lid_handle_screw_hole_fit
+    );
+    color("mintcream", 0.8)
+    render(convexity=4)
+    difference() {
+        translate([0, 0, -t / 2])
+        linear_extrude(height=t)
+        offset(r=1.5) offset(r=-1.5)
+        union() {
+            // Grip bar
+            translate([
+                -bar_length / 2,
+                -arm_length - split_handle_bar_width / 2
+            ])
+            square([bar_length, split_handle_bar_width]);
+            // Arms and pivot eyelets
+            for (sx = _split_handle_arm_slots()) {
+                translate([sx - split_handle_arm_width / 2, -arm_length])
+                square([split_handle_arm_width, arm_length]);
+                translate([sx, 0])
+                circle(r=split_handle_eyelet_radius);
+            }
+        }
+        // Pivot screw holes
+        for (sx = _split_handle_arm_slots())
+        translate([sx, 0, 0])
+        rotate([0, 90, 0])
+        cylinder(
+            h=split_handle_arm_width * 3,
+            d=screw_hole_diameter_loose,
+            center=true
+        );
+        // Drag-texture grooves across the bar face toward the lid surface
+        for (dy = [-2.4, 0, 2.4])
+        translate([0, -arm_length + dy, -t / 2])
+        rotate([45, 0, 0])
+        cube([bar_length + 1, 1.0, 1.0], center=true);
+    }
+}
+
 module _lid_handle_bosses(expand=0) {
+    if (_lid_handle_split()) {
+        _split_handle_bosses(expand);
+    } else {
+        _lid_handle_bail_bosses(expand);
+    }
+}
+
+module _lid_handle_bail_bosses(expand=0) {
     eyelet_radius = _lid_handle_eyelet_radius();
     boss_width = lid_handle_boss_width;
     axis_offset = _lid_handle_axis_offset();
@@ -2565,6 +2764,14 @@ module _lid_handle_bosses(expand=0) {
 }
 
 module _lid_handle_screw_holes() {
+    if (_lid_handle_split()) {
+        _split_handle_screw_holes();
+    } else {
+        _lid_handle_bail_screw_holes();
+    }
+}
+
+module _lid_handle_bail_screw_holes() {
     hole_start = lid_handle_arm_width / 2 + lid_handle_fit - 0.5;
     thread_radius = (
         (lid_handle_screw_diameter + screw_hole_diameter_size_tolerance) / 2
@@ -2666,7 +2873,29 @@ module _lid_handle_bail() {
 module _lid_handle(placement="default") {
     rbox_for_top()
     if (_lid_handle_enabled()) {
-        if (placement == "print") {
+        if (_lid_handle_split()) {
+            if (placement == "print") {
+                // Both halves are the same part; print two
+                for (i = [0:1:1])
+                translate([
+                    0,
+                    i * (
+                        split_handle_arm_length
+                        + split_handle_bar_width + 6
+                    ),
+                    split_handle_bar_thickness / 2
+                ])
+                _split_handle_half();
+            } else {
+                // Folded flat into the lid pocket, part coordinates
+                for (r = [0, 180])
+                rotate([0, 0, r])
+                translate([
+                    0, split_handle_axis_offset, _lid_handle_axis_depth()
+                ])
+                _split_handle_half();
+            }
+        } else if (placement == "print") {
             translate([0, 0, lid_handle_bar_thickness / 2])
             _lid_handle_bail();
         } else {

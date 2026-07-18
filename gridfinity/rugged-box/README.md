@@ -89,6 +89,25 @@ lid hinges and latches → box body → side stacking latches → next box below
 The weakest links are the printed latch and hinge parts, which is what the
 heavy-duty option reinforces.
 
+#### Split style (`Lid_Handle_Style` = "split")
+
+An alternative handle: two point-symmetric half-bails (the same printed
+part twice) on parallel axes 18 mm apart at the lid center. They fold
+inward past each other — the arms are interleaved into separate lanes —
+and rise to a **self-clamping X-arch**: under load, arm tension presses
+the two grip bars together, so the arch needs no latch. Compared to the
+single bail:
+
+* Four M3 pivots share the carry load (half the per-pivot cyclic load).
+* The pocket is symmetric and shorter (~63 mm vs ~72 mm) and 1 mm
+  shallower, preserving more of the lid stacking grid.
+* The pivot axes are centered on every box size, so a carried box hangs
+  level even at 2 units long (the single bail is offset there).
+* No finger scoop: raise the handle by dragging both textured bars
+  toward the center with two fingertips, then grip the met pair
+  (~27 mm above the lid; fingers curl into the arch and the open pocket).
+* Hardware: 4x M3x18..20.
+
 ### Heavy-duty attachments (`Heavy_Duty`, default on)
 
 * All hinge, latch, and stacking latch screws move from **M3 to M4**, and

@@ -68,6 +68,13 @@ Label_Text_Size = 10; // [5:0.1:25]
 // Requires a box at least 3 units wide with a top at least 2 units tall.
 Lid_Handle = true;
 
+// Handle style: a single fold-flat bail, or two half-bails on parallel
+// central axes rising to a self-clamping X-arch. The split style has a
+// shorter symmetric pocket (preserves more of the lid stacking grid),
+// four pivots sharing the carry load, and hangs level on every box size;
+// raise it by dragging both textured bars toward the center.
+Lid_Handle_Style = "bail"; // [bail: Single bail, split: Two half-bails (X-arch)]
+
 /* [Reinforcement] */
 // Use M4 attachment screws with enlarged screw eyelets and thicker latches
 // and hinges, for carrying stacks of loaded boxes (up to ~5 kg per box,
@@ -419,6 +426,7 @@ module main() {
         nut_pockets=Nut_Pockets,
         axle_sleeves=Axle_Sleeves,
         lid_handle=Lid_Handle,
+        lid_handle_style=Lid_Handle_Style,
         lid_handle_stow_depth=(
             // Keep the folded handle below the bases of a box stacked on top
             Gridfinity_Stackable ? stackable_plate_offset + 1.0 : 1.0
