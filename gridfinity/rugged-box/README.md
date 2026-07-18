@@ -129,6 +129,20 @@ defaults, 28 + 2 × 6 = 40) so adjacent latches do not overlap. The default
 * `Third_Hinge` and `Lid_Handle` default to true, `Heavy_Duty` defaults to
   true.
 
+### Removable level tray (`level-tray.scad`)
+
+A companion model: a removable tray whose top face copies the box floor
+baseplate and whose underside has Gridfinity feet, so it registers on the
+box floor or on a layer of equal-height bins — building removable levels
+of bins inside the box. Two fold-flat pull bails recessed into deepened
+wells at two edge cells allow lifting the whole level out; folded, the
+bails stay below the bin seating plane, so every cell remains usable
+(remove the two bins over the wells to raise the bails). Fully printed:
+the bails pivot on printed 3 mm axle pins inserted from the tray edge
+faces; inside the box, the box walls keep the pins captive. Set `Width`
+and `Length` to the box size; parts: `tray`, `pull_bail` (x2),
+`axle_pin` (x2).
+
 ### Print recommendations for load-rated boxes
 
 * Material: PETG or ASA (better creep and impact behavior than PLA;
