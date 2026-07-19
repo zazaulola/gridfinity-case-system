@@ -36,7 +36,10 @@ Edge_Chamfer_Proportion = 0.4; // [0:0.1:1]
 
 /* [Features] */
 // Type or shape of seal to use, if desired
-Lip_Seal_Type = "wedge"; // [none: None, wedge: Wedge ▽, square: Square □, "filament-1.75mm": 1.75mm Filament ○]
+Lip_Seal_Type = "wedge"; // [none: None, wedge: Wedge ▽, square: Square □, "filament-1.75mm": 1.75mm Filament ○, silicone: Silicone cord ●]
+
+// Silicone cord diameter in millimeters, for the silicone seal type. The cord snaps into a dovetail groove in the bottom lip; buy soft cord (40-60 ShA). Cord length is echoed to the console.
+Silicone_Cord_Diameter = 3.0; // [2:0.5:4]
 
 // Make the corners as thick as the box lip
 Reinforced_Corners = false;
@@ -102,6 +105,7 @@ rbox(
     corner_radius=Corner_Radius,
     edge_chamfer_proportion=Edge_Chamfer_Proportion,
     lip_seal_type=Lip_Seal_Type,
+    seal_cord_diameter=Silicone_Cord_Diameter,
     reinforced_corners=Reinforced_Corners,
     latch_type=Latch_Type,
     top_grip=Top_Grip,

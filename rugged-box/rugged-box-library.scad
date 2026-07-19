@@ -148,6 +148,11 @@ label_max_height = 30;
  *      - "square": Square-shaped seal
  *      - "filament-1.75mm": Seal cutout on both top and bottom for
  *          1.75mm filament
+ *      - "silicone": Dovetail groove in the bottom lip for silicone
+ *          cord of seal_cord_diameter; the flat top lip compresses the
+ *          cord by up to ~25% and the undercut retains it when open
+ *  - seal_cord_diameter: Silicone cord diameter in millimeters for the
+ *    "silicone" seal type
  *  - reinforced_corners: Make the corners as thick as the box lip
  *  - latch_type: Style of front latches: "clip" or "draw"
  *  - latch_count: Number of latches (1 or 2). The default of 0 determines the
@@ -199,6 +204,7 @@ module rbox(
     corner_radius=5,
     edge_chamfer_proportion=0.4,
     lip_seal_type="wedge",
+    seal_cord_diameter=3.0,
     reinforced_corners=false,
     latch_type="draw",
     latch_count=0,
@@ -222,6 +228,7 @@ module rbox(
     $b_corner_radius = corner_radius;
     $b_edge_chamfer_proportion = edge_chamfer_proportion;
     $b_lip_seal_type = lip_seal_type;
+    $b_seal_cord_diameter = seal_cord_diameter;
     $b_reinforced_corners = reinforced_corners;
     $b_latch_type = latch_type;
     $b_latch_count = latch_count;
@@ -642,6 +649,18 @@ module rbox_bom() {
                 )
             ) : ""
         ));
+        if ($b_lip_seal_type == "silicone") {
+            seal_r = $b_corner_radius + $b_total_lip_thickness / 2;
+            seal_length = (
+                2 * ($b_inner_width + $b_inner_length)
+                + 2 * PI * seal_r
+            );
+            echo(str(
+                "Silicone seal cord needed: ~", ceil(seal_length + 20),
+                " mm of ", $b_seal_cord_diameter,
+                " mm cord (soft, 40..60 ShA)"
+            ));
+        }
         if (_lid_handle_enabled()) {
             echo(_lid_handle_split()
                 ? str(
@@ -1374,11 +1393,28 @@ module _box_seal_shape() {
     seal_thickness = (
         $b_lip_seal_type == "filament-1.75mm"
             ? 1.75
-            : $b_total_lip_thickness / 3
+            : $b_lip_seal_type == "silicone"
+                ? $b_seal_cord_diameter
+                : $b_total_lip_thickness / 3
     );
     translate([$b_corner_radius + $b_total_lip_thickness / 2, 0]) {
         if ($b_lip_seal_type == "filament-1.75mm") {
             circle(seal_thickness / 2);
+        } else if ($b_lip_seal_type == "silicone") {
+            // Dovetail cord groove in the bottom lip. Depth 0.75d gives up
+            // to ~25% face compression, limited by lip contact; the
+            // undercut mouth (0.95d) snaps the cord in place; the groove
+            // area exceeds the cord area so the incompressible silicone
+            // has room to spread.
+            d = seal_thickness;
+            polygon(points=[
+                [-d * 0.475, d * 0.02],
+                [d * 0.475, d * 0.02],
+                [d * 0.625, -d * 0.55],
+                [d * 0.5, -d * 0.75],
+                [-d * 0.5, -d * 0.75],
+                [-d * 0.625, -d * 0.55],
+            ]);
         } else if ($b_lip_seal_type == "square") {
             translate([0, -seal_thickness / 2])
             square(seal_thickness, center=true);
@@ -1406,8 +1442,12 @@ module _box_seal(delta=0) {
 }
 
 module _box_add_seal() {
+    // Seal types cut into the parts rather than printed onto the top;
+    // the silicone groove shape lies below the lip plane, so the cut on
+    // the top part is a no-op and only the bottom lip gets the groove
     is_seal_top_inset = (
-        $b_lip_seal_type == "filament-1.75mm" ? true : false
+        $b_lip_seal_type == "filament-1.75mm"
+        || $b_lip_seal_type == "silicone"
     );
     delta = is_seal_top_inset ? 0 : 0.2;
     difference() {

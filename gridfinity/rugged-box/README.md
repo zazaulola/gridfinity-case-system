@@ -47,7 +47,8 @@ Box options:
 * Optional handle
 * Optional label
 * Top opening grip and hinge end stops
-* Lip seal, integrated or for 1.75mm filament
+* Lip seal: integrated, for 1.75mm filament, or a dovetail groove for
+  silicone cord (fork addition)
 * Reinforced (thicker) corners
 * Optional third hinge for large boxes
 
@@ -170,6 +171,23 @@ echoed to the console). Latch, stacking latch, hinge, and handle bores
 grow to ride the sleeve, so render **all** parts with the option enabled —
 sleeve-mode latches do not fit a non-sleeve box. Requires `Heavy_Duty`
 (M4 sizing); the front `Handle` option still uses long screws.
+
+### Silicone cord seal (`Lip_Seal_Type` = "silicone")
+
+A dovetail cord groove in the bottom lip for standard silicone cord
+(`Silicone_Cord_Diameter` 2..4 mm, default 3):
+
+* Groove depth is 0.75x the cord diameter, so the flat top lip compresses
+  the cord by up to ~25% at full closure, self-limited by lip contact.
+* The dovetail mouth (0.95x cord) snaps the cord in and retains it when
+  the box is open; the groove cross-section exceeds the cord area so the
+  incompressible silicone has room to spread.
+* Use **soft** cord (40..60 ShA); harder cord raises the latch closing
+  force noticeably on large boxes. The required cord length is echoed to
+  the console (BOM). Join the ends with a straight butt cut and a drop of
+  cyanoacrylate, placed mid-wall on the hinge side.
+* The top part is unchanged — the option only alters the bottom, and
+  works with any other option combination.
 
 ### Stacking latch density (`Stacking_Latch_Density`)
 
