@@ -1,13 +1,51 @@
-# Gridfinity case system (fork of smkent/monoscad)
+# Gridfinity Case System
 
-This is a fork of [smkent/monoscad](https://github.com/smkent/monoscad)
-focused on the [Gridfinity Rugged Storage Box](gridfinity/rugged-box/).
-Fork additions: a fold-flat carry handle recessed into the center of the lid
-that preserves box-on-box stacking, and heavy-duty attachment options (M4
-hardware, enlarged eyelets and latches, denser stacking latches) rated for
-carrying stacks of loaded boxes (~5 kg per box, ~15-25 kg per stack). See
-[gridfinity/rugged-box/README.md](gridfinity/rugged-box/README.md) for
-details.
+A fork of [smkent/monoscad](https://github.com/smkent/monoscad) focused on
+the [Gridfinity Rugged Storage Box](gridfinity/rugged-box/): a stackable,
+latching, parametric OpenSCAD case system for Gridfinity bins, extended
+into a complete carry system rated for **~5 kg per case and 15-25 kg per
+stack**.
+
+![Demo animation](images/fork/demo.gif)
+
+*One-turn overview → lid opens → two layers of bins and a removable level
+tray go in → a second case stacks below and locks → the split lid handle
+rises into its self-clamping X-arch and lifts the stack.*
+
+## Fork additions
+
+![Open case with bins](images/fork/hero-open.png)
+
+* **Lid carry handle** recessed into the center of the lid — folded, it
+  stays below the stacking plane, so cases still stack and latch on top.
+  Two styles: a single fold-flat bail, or the **split X-arch** (two
+  identical half-bails on central axes whose grip bars press together
+  under load; four pivots, level carry on every case size).
+* **Heavy-duty attachments**: M4 screws with enlarged eyelets and latch
+  bodies, a third hinge from 3 units wide, and optional stacking latches
+  at every grid boundary.
+* **Removable level tray**: a baseplate tray with Gridfinity feet that
+  turns bin layers into liftable levels; fold-flat pull bails hide below
+  the bin seating plane, all-printed pivots.
+* **Hardware-friendly options**: hex nut pockets (screws clamp with nuts,
+  no thread-forming); **axle sleeves** — printed 8 mm bearing sleeves
+  retained by two short M4x12..20 screws, so no screws longer than 20 mm
+  are needed anywhere and rotating parts never ride on threads.
+* **Silicone cord seal**: a dovetail groove in the bottom lip for 2-4 mm
+  cord, with snap-in retention and self-limited ~25% compression.
+* **Bins**: plain stackable bins and sliding-lid bins (from
+  [gridfinity/lid-bins](gridfinity/lid-bins/)) compose with the cases;
+  equal-height bins act as a baseplate for the next layer.
+
+![Stacked cases with raised handle](images/fork/hero-stack.png)
+![Stacking hardware](images/fork/hero-hardware.png)
+
+See [gridfinity/rugged-box/README.md](gridfinity/rugged-box/README.md) for
+option documentation, load-path rationale, hardware lists, and print
+guidance. A full pre-rendered STL kit for 260mm printers (5x5 case, 90
+bins, 90 lidded bins, level tray) is generated under
+`gridfinity/rugged-box/build/` (see the manifest there; the video is
+`images/fork/demo.mp4`).
 
 ---
 
